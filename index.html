@@ -1,0 +1,3438 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI Agent Design Patterns</title>
+<meta name="description" content="The 13 most common AI agent design patterns built with LangGraph, ranked by production use, with diagrams, Python and TypeScript code, and real company examples.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@500;700;800&family=Atkinson+Hyperlegible+Next:wght@400;500;600;700&family=Atkinson+Hyperlegible+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link id="hljs-light" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css" media="all">
+<link id="hljs-dark" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css" media="not all">
+<script>
+  // Theme: follow the computer's setting unless the reader picked one with the switch.
+  // Runs before the page paints, so there is no flash of the wrong theme.
+  window.applyTheme = (dark) => {
+    document.documentElement.dataset.theme = dark ? "dark" : "light";
+    document.getElementById("hljs-light").media = dark ? "not all" : "all";
+    document.getElementById("hljs-dark").media = dark ? "all" : "not all";
+  };
+  window.systemDark = matchMedia("(prefers-color-scheme: dark)");
+  let saved = null;
+  try { saved = localStorage.getItem("theme"); } catch {}
+  applyTheme(saved ? saved === "dark" : systemDark.matches);
+</script>
+<style>
+  :root {
+    --paper: #f4f6f3;
+    --plate: #ffffff;
+    --ink: #16201a;
+    --muted: #515b55;
+    --rule: #d6dcd5;
+    --rule-strong: #858d87;
+    --green: #1d6a47;
+    --green-soft: #e4efe8;
+    --rust: #ad4128;
+    --code-bg: #f2f5f1;
+    --edge: #66706a;
+    --sil: #2a3530;
+    --llm-fill: #e4efe8;  --llm-stroke: #1d6a47;
+    --tool-fill: #f0f2ee; --tool-stroke: #66706a;
+    --human-fill: #f7efda; --human-stroke: #8a5f00;
+    --data-fill: #e6edf5; --data-stroke: #375f8c;
+    --io-fill: #ffffff;   --io-stroke: #66706a;
+    --font-display: "Schibsted Grotesk", "Atkinson Hyperlegible Next", system-ui, sans-serif;
+    --font-body: "Atkinson Hyperlegible Next", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --font-code: "Atkinson Hyperlegible Mono", ui-monospace, "SF Mono", Menlo, monospace;
+    --radius: 12px;
+  }
+  :root { color-scheme: light; }
+  :root[data-theme="dark"] {
+      color-scheme: dark;
+      --paper: #101412;
+      --plate: #171c19;
+      --ink: #e4eae5;
+      --muted: #a0aaa3;
+      --rule: #29302c;
+      --rule-strong: #6b7570;
+      --green: #6dc99c;
+      --green-soft: #1b3226;
+      --rust: #f08b6d;
+      --code-bg: #0e1210;
+      --edge: #8d978f;
+      --sil: #c9d3cc;
+      --llm-fill: #1b3226;  --llm-stroke: #6dc99c;
+      --tool-fill: #212724; --tool-stroke: #8d978f;
+      --human-fill: #33280f; --human-stroke: #e0ae48;
+      --data-fill: #1a2735; --data-stroke: #80aad8;
+      --io-fill: #171c19;   --io-stroke: #8d978f;
+  }
+
+  * { box-sizing: border-box; }
+  @media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
+  html { scrollbar-color: var(--rule-strong) var(--paper); }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font: 16px/1.6 var(--font-body);
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: var(--green); text-underline-offset: 0.18em; text-decoration-thickness: 1px; }
+  a:hover { text-decoration-thickness: 2px; }
+  ::selection { background: var(--green); color: var(--plate); }
+  :focus-visible { outline: 2px solid var(--green); outline-offset: 2px; border-radius: 4px; }
+  code { font-family: var(--font-code); font-size: 0.92em; }
+  /* No single word stranded on a last line: prettier wrapping for text, balanced headings */
+  p, li, .tagline, .ex-text span, .specimen-mark, .specimen-name, .combo-text, .key li > span { text-wrap: pretty; }
+  h1, h2, h3, .specimen-name { text-wrap: balance; }
+  .sr-only {
+    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+  }
+  .skip-link {
+    position: absolute; left: 16px; top: -100px; z-index: 30;
+    background: var(--plate); color: var(--green); border: 1px solid var(--green);
+    padding: 10px 14px; border-radius: 8px; font-weight: 700; text-decoration: none;
+  }
+  .skip-link:focus { top: 12px; }
+  .wrap { max-width: 1320px; margin: 0 auto; padding: 0 24px; }
+  @media (max-width: 600px) { .wrap { padding: 0 16px; } }
+
+  /* ---------- Masthead: the guide's cover ---------- */
+  .masthead { padding: 36px 0 28px; }
+  .masthead .wrap { display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, 400px); gap: 40px; align-items: center; }
+  @media (max-width: 960px) { .masthead .wrap { grid-template-columns: minmax(0, 1fr); gap: 32px; } .masthead { padding: 40px 0 32px; } }
+  .masthead h1 {
+    font-family: var(--font-display); font-weight: 800;
+    font-size: clamp(34px, 3.8vw, 52px); line-height: 1.04; letter-spacing: -0.03em;
+    margin: 0 0 16px; text-wrap: balance;
+  }
+  .masthead h1 .field { color: var(--green); }
+  .lead { font-size: 18px; line-height: 1.5; color: var(--muted); max-width: 60ch; margin: 0 0 10px; text-wrap: balance; }
+  .meta { font-size: 14px; color: var(--muted); margin: 0; }
+
+  .key { background: var(--plate); border: 1px solid var(--rule); border-radius: var(--radius); padding: 16px 20px; }
+  .key h2 { font-family: var(--font-display); font-size: 16px; font-weight: 700; margin: 0 0 10px; letter-spacing: -0.005em; }
+  .key ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 7px; font-size: 14px; line-height: 1.45; color: var(--muted); }
+  .key li { display: grid; grid-template-columns: 52px 1fr; align-items: center; gap: 10px; }
+  .key svg { display: block; }
+  .key .kinds { display: flex; gap: 3px; }
+  .key-code { font-size: 12px; color: var(--green); text-decoration: underline; text-underline-offset: 0.2em; }
+
+  /* ---------- Plate index (sticky) ---------- */
+  nav.toc {
+    position: sticky; top: 0; z-index: 10;
+    background: color-mix(in srgb, var(--paper) 92%, transparent);
+    backdrop-filter: blur(8px);
+    border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule);
+  }
+  nav.toc .wrap { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; padding-top: 6px; padding-bottom: 6px; }
+  nav.toc a {
+    flex: none; text-decoration: none; color: var(--muted); font-size: 14px; font-weight: 600;
+    padding: 4px; white-space: nowrap; border-radius: 8px;
+    display: inline-flex; align-items: center; gap: 7px; min-height: 36px; min-width: 36px; justify-content: center;
+  }
+  nav.toc a:hover { color: var(--ink); background: var(--green-soft); }
+  nav.toc a[aria-current] { color: var(--ink); }
+  nav.toc .toc-compare { padding: 4px 10px 4px 6px; margin-right: 6px; }
+  .toc-current { margin-left: auto; font-family: var(--font-display); font-weight: 700; font-size: 16px; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; padding-left: 12px; }
+  .toc-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+  .toc-toggle { display: none; }
+  .theme-toggle {
+    appearance: none; flex: none; width: 36px; height: 36px; margin-left: 8px; display: inline-grid; place-items: center;
+    background: var(--plate); color: var(--ink); border: 1px solid var(--rule-strong); border-radius: 8px; cursor: pointer;
+  }
+  .theme-toggle:hover { border-color: var(--green); color: var(--green); }
+  .theme-toggle svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+  .theme-toggle .i-sun, :root[data-theme="dark"] .theme-toggle .i-moon { display: none; }
+  :root[data-theme="dark"] .theme-toggle .i-sun { display: block; }
+  @media (pointer: coarse) { .theme-toggle { width: 44px; height: 44px; } }
+  @media (max-width: 760px) {
+    nav.toc .wrap { flex-wrap: wrap; gap: 4px; }
+    .toc-current { flex: 1; padding-left: 4px; font-size: 14px; }
+    .toc-toggle {
+      display: inline-flex; align-items: center; min-height: 36px; padding: 4px 12px; flex: none;
+      appearance: none; font: inherit; font-size: 14px; font-weight: 600; color: var(--ink);
+      background: var(--plate); border: 1px solid var(--rule-strong); border-radius: 8px; cursor: pointer;
+    }
+    .toc-chips { display: none; order: 4; flex-basis: 100%; padding: 4px 0 2px; }
+    nav.toc.is-open .toc-chips { display: flex; }
+    .toc-chips a { min-width: 40px; min-height: 40px; }
+  }
+  nav.toc a b {
+    font-family: var(--font-display); font-weight: 700; font-size: 13px; font-variant-numeric: tabular-nums;
+    min-width: 26px; height: 26px; border-radius: 8px; display: inline-grid; place-items: center;
+    border: 1px solid var(--rule-strong); color: var(--ink);
+  }
+  nav.toc a[aria-current] b { background: var(--green); border-color: var(--green); color: var(--plate); }
+
+  /* ---------- Comparison plate ---------- */
+  .compare { padding: 28px 0 24px; scroll-margin-top: 64px; }
+  .section-title { font-family: var(--font-display); font-weight: 800; font-size: clamp(24px, 2.6vw, 30px); letter-spacing: -0.02em; line-height: 1.1; margin: 0 0 14px; }
+  .compare-intro { color: var(--muted); max-width: 68ch; margin: 0 0 18px; }
+  .compare-note { color: var(--muted); font-size: 14px; margin: 12px 0 0; }
+  .filter { border: 0; padding: 0; margin: 0 0 14px; }
+  .filter legend { font-weight: 700; font-size: 16px; margin-bottom: 8px; padding: 0; }
+  .chips-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  .trait {
+    appearance: none; font: inherit; font-size: 14px; font-weight: 500; color: var(--ink);
+    background: var(--plate); border: 1px solid var(--rule-strong); border-radius: 999px;
+    padding: 6px 13px; min-height: 36px; cursor: pointer;
+  }
+  .trait:hover { border-color: var(--green); }
+  .trait[aria-pressed="true"] { background: var(--green); border-color: var(--green); color: var(--plate); }
+  .trait svg { display: none; width: 12px; height: 12px; margin-right: 6px; vertical-align: -1px; }
+  .trait[aria-pressed="true"] svg { display: inline-block; }
+  .clear-filter { appearance: none; background: none; border: 0; font: inherit; font-size: 14px; color: var(--green); text-decoration: underline; text-underline-offset: 0.18em; cursor: pointer; padding: 8px 6px; min-height: 38px; }
+  .clear-filter[hidden] { display: none; }
+  .filter-status { font-size: 14px; color: var(--muted); margin: 6px 0 0; min-height: 1.5em; }
+
+  .specimens {
+    list-style: none; margin: 0; padding: 0;
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+    background: var(--plate); border: 1px solid var(--rule); border-radius: var(--radius); overflow: hidden;
+  }
+  .specimens li { box-shadow: inset -1px -1px 0 var(--rule); }
+  .specimen {
+    display: grid; grid-template-rows: 84px auto auto auto; align-content: start; gap: 8px;
+    height: 100%; padding: 14px 16px 16px; color: var(--ink); text-decoration: none;
+    transition: background-color .2s ease-out, opacity .25s ease-out, box-shadow .2s ease-out;
+  }
+  .specimen.is-match { box-shadow: inset 0 0 0 2px var(--green); background: var(--green-soft); }
+  .specimen:hover { background: var(--green-soft); }
+  .specimen:focus-visible { outline-offset: -3px; border-radius: 0; }
+  .specimen svg { width: 100%; height: 84px; display: block; }
+  .specimen-name { font-family: var(--font-display); font-weight: 700; font-size: 17px; line-height: 1.25; letter-spacing: -0.01em; display: flex; gap: 8px; align-items: baseline; min-height: 2.5em; }
+  .rank {
+    flex: none; font-family: var(--font-display); font-weight: 800; font-size: 12px; font-variant-numeric: tabular-nums;
+    min-width: 22px; height: 22px; border-radius: 6px; display: inline-grid; place-items: center;
+    background: var(--ink); color: var(--paper); transform: translateY(-2px);
+  }
+  .specimen-mark { font-size: 14px; line-height: 1.45; color: var(--muted); display: flex; gap: 8px; }
+  /* Filtered out: fade the drawing, keep the text at readable (AA) contrast */
+  .specimen.is-dim svg, .specimen.is-dim .abund-bar { opacity: 0.25; }
+  .specimen.is-dim .specimen-name, .specimen.is-dim .specimen-mark { color: var(--muted); }
+  .specimen.is-dim .rank, .specimen.is-dim .fm-dot { background: var(--muted); }
+  @media (max-width: 560px) {
+    .specimens { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .specimen { grid-template-rows: 64px auto auto; padding: 12px 12px 14px; gap: 6px; }
+    .specimen svg { height: 64px; }
+    .specimen-name { font-size: 16px; gap: 6px; min-height: 3.9em; }
+    .specimen-mark { display: none; }
+    .specimen .abund { font-size: 12px; gap: 6px; }
+    .specimen .abund-bar i { width: 9px; }
+  }
+  .specimen.is-dim:hover svg, .specimen.is-dim:focus-visible svg { opacity: 0.6; }
+  @media (prefers-reduced-motion: reduce) { .specimen { transition: none; } }
+
+  .sil-llm { fill: var(--llm-stroke); }
+  .sil-tool { fill: var(--tool-stroke); }
+  .sil-human { fill: var(--human-stroke); }
+  .sil-data { fill: var(--data-stroke); }
+  .sil-io { fill: none; stroke: var(--sil); stroke-width: 3; }
+  .sil-edge { fill: none; stroke: var(--sil); stroke-width: 3; opacity: 0.5; }
+  .sil-edge.dashed { stroke-dasharray: 9 7; }
+
+  /* Field mark dot (rust): used on plates, tiles, and lists */
+  .fm-dot {
+    flex: none; width: 20px; height: 20px; border-radius: 50%; background: var(--rust); color: var(--plate);
+    font: 700 12px/20px var(--font-display); text-align: center; font-variant-numeric: tabular-nums;
+  }
+  .fm circle { fill: var(--rust); }
+  .fm text { fill: var(--plate); font: 700 11.5px var(--font-display); }
+
+  /* Abundance bar */
+  .abund { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); white-space: nowrap; }
+  .abund-bar { display: inline-flex; gap: 2px; }
+  .abund-bar i { width: 12px; height: 6px; border-radius: 4px; background: var(--rule); }
+  .abund-bar i.on { background: var(--green); }
+
+  /* ---------- Seen combined ---------- */
+  .combos { padding: 32px 0 40px; scroll-margin-top: 64px; }
+  .combo-list { list-style: none; margin: 0; padding: 0; background: var(--plate); border: 1px solid var(--rule); border-radius: var(--radius); }
+  .combo { display: grid; grid-template-columns: minmax(200px, 260px) minmax(0, 1fr); gap: 8px 24px; padding: 16px 20px; align-items: start; }
+  .combo + .combo { border-top: 1px solid var(--rule); }
+  .combo-who { display: flex; align-items: center; gap: 12px; }
+  .combo-steps { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0 0 6px; }
+  .combo-step {
+    display: inline-flex; align-items: center; gap: 7px; padding: 3px 10px 3px 4px; min-height: 32px;
+    border: 1px solid var(--rule-strong); border-radius: 8px; color: var(--ink); text-decoration: none;
+    font-family: var(--font-display); font-weight: 700; font-size: 14px;
+  }
+  .combo-step .rank { transform: none; }
+  .combo-step:hover { border-color: var(--green); background: var(--green-soft); }
+  .combo-step.plain { padding-left: 10px; color: var(--muted); border-style: dashed; }
+  .combo-plus { color: var(--muted); font-weight: 700; }
+  .combo-text { margin: 0; color: var(--muted); font-size: 16px; max-width: 75ch; }
+  .combo-src { text-decoration: none; white-space: nowrap; margin-left: 4px; }
+  .combo-src .evidence { color: var(--green); text-decoration: underline; text-underline-offset: 0.18em; }
+  @media (max-width: 760px) { .combo { grid-template-columns: minmax(0, 1fr); padding: 14px 16px; } }
+
+  /* ---------- Plates (one per architecture) ---------- */
+  section.arch { padding: 64px 0; border-top: 1px solid var(--rule); scroll-margin-top: 56px; }
+  .arch-head h2 {
+    font-family: var(--font-display); font-weight: 800; font-size: clamp(26px, 3vw, 34px);
+    line-height: 1.12; letter-spacing: -0.02em; margin: 0 0 12px; text-wrap: balance;
+    display: flex; align-items: baseline; gap: 14px;
+  }
+  .arch-head .num {
+    flex: none; font-size: 0.6em; font-weight: 800; font-variant-numeric: tabular-nums;
+    min-width: 1.9em; height: 1.9em; padding: 0 0.3em; border-radius: 8px; transform: translateY(-0.2em);
+    display: inline-grid; place-items: center; background: var(--ink); color: var(--paper);
+  }
+  .arch-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 20px; margin: 0 0 14px; }
+  .tagline { color: var(--muted); font-size: 17px; margin: 0 0 28px; max-width: 70ch; }
+
+  .grid { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 24px; align-items: start; }
+  @media (max-width: 960px) { .grid { grid-template-columns: minmax(0, 1fr); } }
+  .left { display: flex; flex-direction: column; gap: 24px; min-width: 0; }
+  .card { background: var(--plate); border: 1px solid var(--rule); border-radius: var(--radius); min-width: 0; }
+
+  .diagram { padding: 20px 20px 18px; position: relative; }
+  .diagram-scroll { cursor: zoom-in; }
+  .diagram-expand, .dd-close {
+    appearance: none; display: inline-grid; place-items: center; width: 36px; height: 36px; padding: 0;
+    background: var(--plate); color: var(--muted); border: 1px solid var(--rule-strong); border-radius: 8px; cursor: pointer;
+  }
+  .diagram-expand { position: absolute; top: 10px; right: 10px; z-index: 1; }
+  .diagram-expand:hover, .dd-close:hover { color: var(--green); border-color: var(--green); }
+  .diagram-expand svg, .dd-close svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+  @media (pointer: coarse) { .diagram-expand, .dd-close { width: 44px; height: 44px; } }
+
+  /* Full-screen diagram viewer */
+  .diagram-dialog {
+    width: min(1280px, 96vw); height: min(900px, 94dvh); max-width: none; max-height: none; padding: 0;
+    border: 1px solid var(--rule); border-radius: var(--radius); background: var(--plate); color: var(--ink);
+  }
+  .diagram-dialog[open] { display: grid; grid-template-rows: auto minmax(0, 1fr) auto; }
+  .diagram-dialog::backdrop { background: rgb(10 14 12 / 0.6); }
+  html:has(.diagram-dialog[open]) { overflow: hidden; }
+  .dd-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 16px 10px 24px; border-bottom: 1px solid var(--rule); }
+  .dd-head h2 { font-family: var(--font-display); font-weight: 800; font-size: 18px; letter-spacing: -0.01em; margin: 0; }
+  .dd-figure { min-height: 0; padding: 20px 24px; display: grid; place-items: center; }
+  .dd-figure svg { width: 100%; height: 100%; display: block; }
+  .dd-figure svg text { font-family: var(--font-body); }
+  .diagram-dialog .dd-marks { margin: 0; padding: 12px 24px 18px; border-top: 1px solid var(--rule); display: flex; flex-wrap: wrap; gap: 8px 28px; }
+  .dd-hint { display: none; margin: 0; padding: 0 16px 12px; font-size: 14px; color: var(--muted); text-align: center; }
+  @media (prefers-reduced-motion: no-preference) {
+    .diagram-dialog[open] { animation: dd-in .18s ease-out; }
+    @keyframes dd-in { from { opacity: 0; transform: scale(.98); } }
+  }
+  @media (max-width: 560px) {
+    .diagram-dialog { width: 100vw; height: 100dvh; border: 0; border-radius: 0; }
+    .dd-head { padding: 10px 10px 8px 16px; }
+    .dd-figure { padding: 12px 8px; }
+    .diagram-dialog .dd-marks { padding: 10px 16px 16px; flex-direction: column; }
+  }
+  /* Short landscape screens: give the drawing the height; the field marks are on the page */
+  @media (max-height: 500px) {
+    .diagram-dialog { height: 100dvh; width: 100vw; border-radius: 0; border: 0; }
+    .dd-head { padding: 6px 8px 6px 16px; }
+    .dd-head h2 { font-size: 16px; }
+    .dd-figure { padding: 8px; }
+    .diagram-dialog .dd-marks { display: none; }
+  }
+  @media (max-width: 560px) and (orientation: portrait) { .diagram-dialog[open] { grid-template-rows: auto minmax(0, 1fr) auto auto; } .dd-hint { display: block; } }
+  .diagram-scroll { overflow-x: auto; overscroll-behavior-x: contain; border-radius: 8px; }
+  .diagram svg { width: 100%; height: auto; display: block; }
+  .diagram svg text { font-family: var(--font-body); }
+  .diagram-hint { display: none; margin: 8px 0 0; font-size: 14px; color: var(--muted); }
+  @media (max-width: 560px) {
+    .diagram { margin: 0 -16px; border-radius: 0; border-left: 0; border-right: 0; padding: 14px 8px 16px; }
+    .diagram .marks { margin-left: 8px; margin-right: 8px; }
+    .diagram svg { min-width: calc(var(--diagram-w) * 0.8); }
+    .node text { font-size: 12.5px; }
+    .edge-label { font-size: 12px; }
+    .diagram.is-scrollable .diagram-hint { display: block; margin-left: 8px; }
+  }
+  .n-llm   { fill: var(--llm-fill);   stroke: var(--llm-stroke); }
+  .n-tool  { fill: var(--tool-fill);  stroke: var(--tool-stroke); }
+  .n-human { fill: var(--human-fill); stroke: var(--human-stroke); }
+  .n-data  { fill: var(--data-fill);  stroke: var(--data-stroke); }
+  .n-io    { fill: var(--io-fill);    stroke: var(--io-stroke); }
+  .node rect { stroke-width: 1.5; }
+  .node text { fill: var(--ink); font-size: 12px; font-weight: 600; }
+  .ico { fill: none; stroke: var(--human-stroke); stroke-width: 1.4; stroke-linecap: round; }
+  .edge { fill: none; stroke: var(--edge); stroke-width: 1.5; }
+  .edge.dashed { stroke-dasharray: 5 4; }
+  .arrowhead { fill: var(--edge); }
+  .edge-label { fill: var(--muted); font-size: 12px; }
+  .edge-label-bg { fill: var(--plate); }
+
+  .marks { list-style: none; margin: 16px 0 0; padding: 14px 0 0; border-top: 1px solid var(--rule); display: grid; gap: 8px; }
+  .marks li { display: flex; gap: 10px; font-size: 16px; line-height: 1.45; }
+
+  .examples { padding: 18px 20px 20px; }
+  .examples h3 { font-family: var(--font-display); font-weight: 700; font-size: 16px; margin: 0 0 10px; }
+  .examples ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+  .examples li + li { border-top: 1px solid var(--rule); }
+  .examples li a {
+    display: flex; align-items: center; gap: 14px; padding: 11px 8px; margin: 0 -8px; border-radius: 8px;
+    text-decoration: none; color: var(--ink);
+  }
+  .examples li a:hover { background: var(--green-soft); }
+  .logo {
+    width: 34px; height: 34px; flex: none; border-radius: 8px; background: #fff;
+    border: 1px solid var(--rule); display: grid; place-items: center; overflow: hidden;
+    font-weight: 700; font-size: 14px; color: #16201a; /* fixed: logo tiles stay white in both themes */
+  }
+  .logo img { width: 22px; height: 22px; display: block; }
+  .ex-text { min-width: 0; flex: 1; }
+  .ex-text strong { display: block; font-size: 16px; }
+  .ex-text span { display: block; font-size: 14px; color: var(--muted); }
+  .evidence { flex: none; display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--muted); }
+  .evidence::before { content: ""; width: 9px; height: 9px; border-radius: 50%; background: var(--green); }
+  .evidence.ref::before { background: transparent; border: 1.5px solid var(--muted); }
+  @media (max-width: 420px) {
+    .examples li a { flex-wrap: wrap; row-gap: 4px; }
+    .examples .evidence { flex-basis: 100%; padding-left: 48px; }
+  }
+  .ex-note { font-size: 14px; color: var(--muted); margin: 12px 0 0; }
+
+  .tabs { overflow: hidden; }
+  .tablist { display: flex; border-bottom: 1px solid var(--rule); padding: 0 10px; overflow-x: auto; }
+  .tablist button {
+    appearance: none; background: none; border: 0; border-bottom: 2px solid transparent;
+    padding: 14px 14px 12px; font: inherit; font-size: 16px; font-weight: 600; color: var(--muted);
+    cursor: pointer; white-space: nowrap; margin-bottom: -1px; min-height: 48px;
+  }
+  .tablist button:hover { color: var(--ink); }
+  .tablist button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--green); }
+  .tablist button:focus-visible { outline: 2px solid var(--green); outline-offset: -3px; border-radius: 8px; }
+  .panel { padding: 22px 24px 24px; }
+  .panel[hidden] { display: none; }
+  .summary { max-width: 70ch; }
+  .summary p { margin: 0 0 12px; }
+  .summary h3 { font-family: var(--font-display); margin: 22px 0 6px; font-size: 16px; font-weight: 700; }
+  .summary ul, .summary ol { margin: 0 0 8px; padding-left: 20px; }
+  .summary li { margin: 4px 0; }
+  .summary li::marker { color: var(--muted); }
+  .summary code { background: var(--code-bg); border-radius: 4px; padding: 1px 5px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+  .chips code { font-size: 13px; background: var(--green-soft); color: var(--ink); padding: 3px 9px; border-radius: 6px; }
+  /* Code terms that link to the LangGraph docs */
+  a.doc-link { color: inherit; text-decoration: none; }
+  a.doc-link code { color: var(--green); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 0.2em; }
+  a.doc-link:hover code { text-decoration-thickness: 2px; }
+  .similar { list-style: none; padding: 0 !important; display: grid; gap: 8px; }
+  .similar li { padding: 10px 12px; border: 1px solid var(--rule); border-radius: 8px; margin: 0 !important; }
+  .similar a { font-weight: 700; }
+
+  .code-meta { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
+  .install {
+    font-family: var(--font-code); font-size: 13px; color: var(--muted);
+    background: var(--code-bg); border: 1px solid var(--rule); padding: 6px 10px; border-radius: 8px;
+    overflow-x: auto; white-space: nowrap; max-width: 100%;
+  }
+  .copy {
+    appearance: none; border: 1px solid var(--rule-strong); background: var(--plate); color: var(--ink);
+    font: inherit; font-size: 14px; font-weight: 600; padding: 7px 14px; border-radius: 8px; cursor: pointer; flex: none; min-height: 38px;
+  }
+  .copy:hover { border-color: var(--green); color: var(--green); }
+  @media (pointer: coarse) { .copy, .trait { min-height: 44px; } }
+  pre.code { margin: 0; max-height: 640px; overflow: auto; border-radius: 12px; border: 1px solid var(--rule); background: var(--code-bg); }
+  pre.code:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
+  pre.code code, pre.code code.hljs {
+    display: block; background: var(--code-bg); font-family: var(--font-code); font-size: 13.5px; line-height: 1.6;
+    padding: 16px 18px; white-space: pre;
+  }
+
+  footer { border-top: 1px solid var(--rule); padding: 40px 0 56px; color: var(--muted); font-size: 14px; }
+  footer h2 { font-family: var(--font-display); font-size: 16px; margin: 0 0 10px; color: var(--ink); }
+  footer ul { padding-left: 18px; columns: 2 320px; }
+  footer li { margin: 4px 0; break-inside: avoid; }
+</style>
+</head>
+<body>
+<!-- Shared SVG defs (arrowheads) -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path class="arrowhead" d="M0,0 L10,5 L0,10 z"/>
+    </marker>
+  </defs>
+</svg>
+
+<a class="skip-link" href="#compare">Skip to the comparison</a>
+<div id="announcer" class="sr-only" aria-live="polite"></div>
+<dialog class="diagram-dialog" id="diagram-dialog" aria-labelledby="diagram-dialog-title">
+  <div class="dd-head">
+    <h2 id="diagram-dialog-title"></h2>
+    <button type="button" class="dd-close" aria-label="Close full-screen diagram" title="Close (Esc)"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 5l10 10M15 5L5 15"/></svg></button>
+  </div>
+  <div class="dd-figure"></div>
+  <p class="dd-hint">Turn your phone sideways for a bigger view.</p>
+  <ol class="marks dd-marks" aria-label="Field marks"></ol>
+</dialog>
+
+<header class="masthead">
+  <div class="wrap">
+    <div>
+      <h1>AI Agent <span class="field">Design Patterns</span></h1>
+      <p class="lead">The 13 LangGraph agent architectures teams ship, ranked by production use, with diagrams and working code.</p>
+      <p class="meta">Updated October 2026 · LangGraph 1.x and LangChain 1.x</p>
+    </div>
+    <aside class="key" aria-labelledby="key-title">
+      <h2 id="key-title">How to read a plate</h2>
+      <ul>
+        <li>
+          <span class="kinds" aria-hidden="true">
+            <svg width="11" height="11"><rect x="0.75" y="0.75" width="9.5" height="9.5" rx="3" class="n-llm" stroke-width="1.5"/></svg>
+            <svg width="11" height="11"><rect x="0.75" y="0.75" width="9.5" height="9.5" rx="1" class="n-tool" stroke-width="1.5"/></svg>
+            <svg width="11" height="11"><rect x="0.75" y="0.75" width="9.5" height="9.5" rx="3" class="n-human" stroke-width="1.5"/></svg>
+            <svg width="11" height="11"><rect x="0.75" y="0.75" width="9.5" height="9.5" rx="3" class="n-data" stroke-width="1.5"/></svg>
+          </span>
+          <span><b>Green</b> nodes call an LLM, <b>square</b> ones are tools, <b>ochre</b> ones wait for a person, <b>blue</b> ones hold saved state or memory.</span>
+        </li>
+        <li>
+          <svg width="46" height="12" aria-hidden="true"><path d="M2 6 H40" class="edge dashed" marker-end="url(#arrow)"/></svg>
+          <span>A dashed arrow is a decision; solid arrows always run.</span>
+        </li>
+        <li>
+          <span class="fm-dot" aria-hidden="true">1</span>
+          <span><b>Field marks</b>: the features that set a pattern apart.</span>
+        </li>
+        <li>
+          <span class="abund-bar" aria-hidden="true"><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i></span>
+          <span><b>Abundance</b>: how often it appears in production case studies.</span>
+        </li>
+        <li>
+          <code class="key-code" aria-hidden="true">fn()</code>
+          <span>Underlined <b>code terms</b> open their documentation.</span>
+        </li>
+        <li>
+          <span class="evidence" aria-hidden="true"></span>
+          <span>A named company case study. A <span class="evidence ref" aria-hidden="true"></span> ring marks a reference implementation.</span>
+        </li>
+      </ul>
+    </aside>
+  </div>
+</header>
+
+<nav class="toc" aria-label="Plates"><div class="wrap" id="toc"></div></nav>
+
+<main id="content" tabindex="-1">
+  <noscript><div class="wrap"><p class="compare-intro">This guide is drawn with JavaScript. Turn JavaScript on to see the diagrams, comparisons and code for each architecture.</p></div></noscript>
+  <section class="compare" id="compare" aria-labelledby="compare-title"><div class="wrap">
+    <h2 class="section-title" id="compare-title">Compare all 13 at a glance</h2>
+    <fieldset class="filter">
+      <legend>Show patterns that have:</legend>
+      <div class="chips-row" id="traits"></div>
+      <p class="filter-status" id="filter-status" aria-live="polite"></p>
+    </fieldset>
+    <ul class="specimens" id="specimens"></ul>
+    <p class="compare-note">Ranked by appearances in published case studies. It's an estimate, since no public dataset counts architectures, and real systems combine several: <a href="#combined">see how</a>.</p>
+  </div></section>
+  <section class="combos" id="combined" aria-labelledby="combined-title"><div class="wrap">
+    <h2 class="section-title" id="combined-title">Seen combined in production</h2>
+    <p class="compare-intro">Most production systems stack several patterns.</p>
+    <ul class="combo-list" id="combo-list"></ul>
+  </div></section>
+  <div id="plates"></div>
+</main>
+
+<footer>
+  <div class="wrap">
+    <h2>Sources</h2>
+    <ul>
+      <li><a href="https://www.langchain.com/blog/is-langgraph-used-in-production">Is LangGraph used in production?</a></li>
+      <li><a href="https://www.langchain.com/blog/top-5-langgraph-agents-in-production-2024">Top 5 LangGraph agents in production 2024</a></li>
+      <li><a href="https://www.langchain.com/built-with-langgraph">Built with LangGraph</a></li>
+      <li><a href="https://www.langchain.com/blog/planning-agents">LangChain: Planning agents</a></li>
+      <li><a href="https://www.langchain.com/blog/agentic-rag-with-langgraph">LangChain: Agentic RAG with LangGraph</a></li>
+      <li><a href="https://blog.langchain.com/introducing-ambient-agents">LangChain: Introducing ambient agents</a></li>
+      <li><a href="https://docs.langchain.com/labs/deep-agents/overview">LangChain: Deep Agents docs</a></li>
+      <li><a href="https://www.infoq.com/news/2024/12/ai-agents-langchain">InfoQ: LangChain State of AI Agents</a></li>
+      <li><a href="https://futureagi.com/blog/agent-architecture-patterns-2026/">Agent architecture patterns 2026</a></li>
+      <li><a href="https://alphabold.com/langgraph-agents-in-production">AlphaBold: LangGraph agents in production</a></li>
+    </ul>
+    <p>Code uses Claude models; swap <code>init_chat_model</code> / <code>ChatAnthropic</code> for any provider. Libraries move fast, so check each package's README if an option has been renamed. Company logos are fetched from each company's website icon and belong to their owners.</p>
+  </div>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>
+/* =====================================================================
+   DATA: one entry per architecture, in ranking order.
+   diagram: nodes {id, x, y, label, kind: llm|tool|human|data|io, w?, h?}
+            edges [from, to, {label?, bend?, dashed?, both?}]
+   ===================================================================== */
+const PY_BASE = "pip install -U langgraph langchain langchain-anthropic";
+const TS_BASE = "npm i @langchain/langgraph @langchain/core @langchain/anthropic zod";
+
+const ARCHS = [
+/* ------------------------------------------------------------------ 1 */
+{
+  id: "react",
+  traits: ["single"],
+  marks: [["tools", "Loops between the model and its tools"], ["e", "Ends only when a reply calls no tool"]],
+  similar: [["plan-execute", "plans the whole task first instead of deciding one step at a time."], ["reflection", "adds a critic that reviews the answer before it ships."]],
+  desc: "START goes to the LLM agent. If the agent makes tool calls, ToolNode runs them and returns the results to the agent, which loops until it replies with no tool calls and goes to END.",
+  name: "ReAct Agent (Tool-Calling Loop)",
+  adoption: "Most common",
+  tagline: "The LLM calls tools in a loop until it can answer. Nearly every other architecture is built from these.",
+  diagram: {
+    w: 440, h: 250,
+    nodes: [
+      { id: "s", x: 70, y: 60, label: "START", kind: "io" },
+      { id: "agent", x: 220, y: 60, label: "LLM agent", kind: "llm" },
+      { id: "e", x: 385, y: 60, label: "END", kind: "io", w: 64 },
+      { id: "tools", x: 220, y: 200, label: "ToolNode\n(run tool calls)", kind: "tool", w: 130 },
+    ],
+    edges: [
+      ["s", "agent"],
+      ["agent", "e", { label: "no tools", dashed: true }],
+      ["agent", "tools", { label: "tool calls", dashed: true, bend: 45 }],
+      ["tools", "agent", { label: "results", bend: 45 }],
+    ],
+  },
+  summary: `
+    <p>The model gets the conversation plus a list of tools. On each turn it either calls one or more tools or replies directly. Tool results are added to the conversation and the model goes again. The loop ends when the model replies without a tool call.</p>
+    <h3>How it works</h3>
+    <ol><li>The LLM reads the messages and decides on tool calls.</li><li><code>ToolNode</code> runs the calls and adds the results as messages.</li><li>Repeat until there are no tool calls, then finish.</li></ol>
+    <h3>Use when</h3>
+    <ul><li>You're building a general assistant or copilot with a handful of tools.</li><li>You need a worker inside a bigger system (supervisor, swarm, plan-and-execute).</li></ul>
+    <h3>Watch out for</h3>
+    <ul><li>Loops and drift on long tasks. Set <code>recursion_limit</code>.</li><li>The context grows with every tool result. Long tasks need planning or sub-agents.</li><li>Too many tools in one agent hurts tool choice. Split them into specialists.</li></ul>
+    <h3>Key LangGraph pieces</h3>
+    <div class="chips"><code>MessagesState</code><code>ToolNode</code><code>tools_condition</code><code>create_agent</code></div>`,
+  pyInstall: PY_BASE,
+  py: String.raw`from langchain.chat_models import init_chat_model
+from langchain_core.tools import tool
+from langgraph.errors import GraphRecursionError
+from langgraph.graph import StateGraph, MessagesState, START
+from langgraph.prebuilt import ToolNode, tools_condition
+
+
+@tool
+def get_weather(city: str) -> str:
+    """Return the current weather for a city."""
+    return f"It is sunny and 31°C in {city}."
+
+
+tools = [get_weather]
+llm = init_chat_model("anthropic:claude-sonnet-5-5").bind_tools(tools)
+
+
+def agent(state: MessagesState):
+    return {"messages": [llm.invoke(state["messages"])]}
+
+
+builder = StateGraph(MessagesState)
+builder.add_node("agent", agent)
+builder.add_node("tools", ToolNode(tools))
+builder.add_edge(START, "agent")
+# tools_condition -> "tools" if the last AI message has tool calls, else END
+builder.add_conditional_edges("agent", tools_condition)
+builder.add_edge("tools", "agent")
+graph = builder.compile()
+
+try:
+    result = graph.invoke(
+        {"messages": [{"role": "user", "content": "What's the weather in Dubai?"}]},
+        {"recursion_limit": 20},  # hard stop for runaway tool loops
+    )
+    print(result["messages"][-1].text)
+except GraphRecursionError:
+    print("The agent used 20 steps without finishing. Narrow the task or raise the limit.")
+
+# Prebuilt equivalent (LangChain 1.x):
+# from langchain.agents import create_agent
+# graph = create_agent("anthropic:claude-sonnet-5-5", tools=tools)
+`,
+  tsInstall: TS_BASE,
+  ts: String.raw`import { ChatAnthropic } from "@langchain/anthropic";
+import { tool } from "@langchain/core/tools";
+import { StateGraph, MessagesAnnotation, START, GraphRecursionError } from "@langchain/langgraph";
+import { ToolNode, toolsCondition } from "@langchain/langgraph/prebuilt";
+import { z } from "zod";
+
+const getWeather = tool(
+  async ({ city }) => "It is sunny and 31°C in " + city + ".",
+  {
+    name: "get_weather",
+    description: "Return the current weather for a city.",
+    schema: z.object({ city: z.string() }),
+  }
+);
+
+const tools = [getWeather];
+const llm = new ChatAnthropic({ model: "claude-sonnet-5-5" }).bindTools(tools);
+
+async function agent(state: typeof MessagesAnnotation.State) {
+  return { messages: [await llm.invoke(state.messages)] };
+}
+
+const graph = new StateGraph(MessagesAnnotation)
+  .addNode("agent", agent)
+  .addNode("tools", new ToolNode(tools))
+  .addEdge(START, "agent")
+  // toolsCondition -> "tools" if the last AI message has tool calls, else END
+  .addConditionalEdges("agent", toolsCondition)
+  .addEdge("tools", "agent")
+  .compile();
+
+try {
+  const result = await graph.invoke(
+    { messages: [{ role: "user", content: "What's the weather in Dubai?" }] },
+    { recursionLimit: 20 } // hard stop for runaway tool loops
+  );
+  console.log(result.messages.at(-1)?.text);
+} catch (e) {
+  if (!(e instanceof GraphRecursionError)) throw e;
+  console.log("The agent used 20 steps without finishing. Narrow the task or raise the limit.");
+}
+
+// Prebuilt equivalent (LangChain 1.x):
+// import { createAgent } from "langchain";
+// const graph = createAgent({ model: "anthropic:claude-sonnet-5-5", tools });
+`,
+  examplesTitle: "Used as the worker inside",
+  examples: [
+    { company: "LinkedIn", domain: "linkedin.com", title: "Hiring Assistant: sub-agents with skills (tools)", url: "https://www.zenml.io/llmops-database/building-linkedin-s-first-production-agent-hiring-assistant-platform-and-architecture" },
+    { company: "Exa", domain: "exa.ai", title: "Research tasks with tool access", url: "https://blog.langchain.com/exa" },
+    { company: "Airtop", domain: "airtop.ai", title: "Browser automation agent", url: "https://blog.langchain.com/customers-airtop/" },
+  ],
+},
+
+/* ------------------------------------------------------------------ 2 */
+{
+  id: "supervisor",
+  traits: ["specialists"],
+  marks: [["sup", "Every step returns to the hub"], ["b", "Workers never talk to each other"]],
+  similar: [["network", "no hub: agents hand off to each other directly."], ["swarm", "also hands off directly, and remembers the active agent between turns."], ["orchestrator", "workers run in parallel on split-up subtasks instead of taking turns."]],
+  desc: "START goes to the Supervisor. The Supervisor delegates to the Research, Coder or Writer agent; each reports back to the Supervisor, which routes again or goes to END when finished.",
+  name: "Supervisor (Hierarchical Multi-Agent)",
+  adoption: "Very common",
+  tagline: "A central LLM sends each step to a specialist agent and gets the result back. This is the most-cited enterprise multi-agent design.",
+  diagram: {
+    w: 440, h: 290,
+    nodes: [
+      { id: "s", x: 55, y: 70, label: "START", kind: "io", w: 70 },
+      { id: "sup", x: 220, y: 70, label: "Supervisor\n(routes / plans)", kind: "llm", w: 130 },
+      { id: "e", x: 385, y: 70, label: "END", kind: "io", w: 70 },
+      { id: "a", x: 80, y: 235, label: "Research\nagent", kind: "llm", w: 100 },
+      { id: "b", x: 220, y: 235, label: "Coder\nagent", kind: "llm", w: 100 },
+      { id: "c", x: 360, y: 235, label: "Writer\nagent", kind: "llm", w: 100 },
+    ],
+    edges: [
+      ["s", "sup"],
+      ["sup", "e", { label: "FINISH", dashed: true }],
+      ["sup", "a", { label: "delegate", dashed: true, bend: 18 }], ["a", "sup", { bend: 18 }],
+      ["sup", "b", { dashed: true, bend: 22 }], ["b", "sup", { bend: 22 }],
+      ["sup", "c", { dashed: true, bend: 18 }], ["c", "sup", { label: "report", bend: 18 }],
+    ],
+  },
+  summary: `
+    <p>A supervisor LLM looks at the conversation and decides which specialist works next. Each specialist (usually a ReAct agent with its own tools and prompt) does one piece of work and reports back. The supervisor repeats this until it decides the task is finished.</p>
+    <h3>How it works</h3>
+    <ol><li>The supervisor uses structured output (or a handoff tool) to pick the next worker.</li><li>The worker runs with its own tools and returns a summary.</li><li>The supervisor sees the result and routes again, or finishes.</li></ol>
+    <p><strong>Hierarchical teams:</strong> any worker can itself be a supervisor subgraph, so you can build teams of teams.</p>
+    <h3>Use when</h3>
+    <ul><li>The tools split naturally by domain (search, code, CRM, billing).</li><li>You need one control point for guardrails, logging and handover to humans.</li></ul>
+    <h3>Watch out for</h3>
+    <ul><li>Every step goes through the supervisor, which adds latency and tokens.</li><li>The supervisor's prompt becomes the bottleneck as the number of workers grows.</li></ul>
+    <h3>Key LangGraph pieces</h3>
+    <div class="chips"><code>Command(goto=...)</code><code>with_structured_output</code><code>subgraphs</code><code>langgraph-supervisor</code></div>`,
+  pyInstall: PY_BASE,
+  py: String.raw`from typing import Literal
+
+from pydantic import BaseModel
+from langchain.agents import create_agent
+from langchain.chat_models import init_chat_model
+from langchain_core.messages import HumanMessage
+from langchain_core.tools import tool
+from langgraph.graph import StateGraph, MessagesState, START, END
+from langgraph.types import Command
+
+llm = init_chat_model("anthropic:claude-sonnet-5-5")
+MAX_TURNS = 6  # worker hand-offs before the supervisor must stop
+
+
+@tool
+def web_search(query: str) -> str:
+    """Search the web."""
+    return f"(top results for {query})"
+
+
+@tool
+def run_python(code: str) -> str:
+    """Execute Python code in a sandbox and return stdout."""
+    return "(stdout)"
+
+
+# Specialists: each is a ReAct agent with its own tools and prompt
+researcher = create_agent(llm, tools=[web_search], system_prompt="You are a researcher. Cite sources.")
+coder = create_agent(llm, tools=[run_python], system_prompt="You write and run Python to answer questions.")
+
+
+class State(MessagesState):
+    turns: int
+
+
+class Route(BaseModel):
+    next: Literal["researcher", "coder", "FINISH"]
+
+
+def supervisor(state: State) -> Command[Literal["researcher", "coder", "__end__"]]:
+    turns = state.get("turns", 0)
+    if turns >= MAX_TURNS:
+        return Command(goto=END)  # budget spent: stop with what we have
+    system = {
+        "role": "system",
+        "content": "You manage two workers: researcher and coder. "
+                   "Pick who should act next, or FINISH when the user's request is fully answered.",
+    }
+    decision = llm.with_structured_output(Route).invoke([system] + state["messages"])
+    if decision.next == "FINISH":
+        return Command(goto=END)
+    return Command(goto=decision.next, update={"turns": turns + 1})
+
+
+def make_worker(agent, name: str):
+    def node(state: State) -> Command[Literal["supervisor"]]:
+        result = agent.invoke({"messages": state["messages"]})
+        # Report back to the supervisor as a named message
+        return Command(
+            update={"messages": [HumanMessage(content=result["messages"][-1].text, name=name)]},
+            goto="supervisor",
+        )
+    return node
+
+
+builder = StateGraph(State)
+builder.add_node("supervisor", supervisor)
+builder.add_node("researcher", make_worker(researcher, "researcher"))
+builder.add_node("coder", make_worker(coder, "coder"))
+builder.add_edge(START, "supervisor")
+graph = builder.compile()
+
+result = graph.invoke(
+    {"messages": [{"role": "user", "content": "Find Dubai's 2025 population and plot growth since 2000"}]}
+)
+# The answer is the last worker's report (a message named after that worker)
+print(result["messages"][-1].text)
+
+# Prebuilt alternative: pip install langgraph-supervisor
+# from langgraph_supervisor import create_supervisor
+# graph = create_supervisor([researcher, coder], model=llm).compile()
+`,
+  tsInstall: TS_BASE + " langchain",
+  ts: String.raw`import { ChatAnthropic } from "@langchain/anthropic";
+import { HumanMessage, type BaseMessage } from "@langchain/core/messages";
+import { tool } from "@langchain/core/tools";
+import { StateGraph, MessagesAnnotation, Annotation, Command, START, END } from "@langchain/langgraph";
+import { createAgent } from "langchain";
+import { z } from "zod";
+
+const llm = new ChatAnthropic({ model: "claude-sonnet-5-5" });
+const MAX_TURNS = 6; // worker hand-offs before the supervisor must stop
+
+const webSearch = tool(async ({ query }) => "(top results for " + query + ")", {
+  name: "web_search",
+  description: "Search the web.",
+  schema: z.object({ query: z.string() }),
+});
+const runPython = tool(async ({ code }) => "(stdout)", {
+  name: "run_python",
+  description: "Execute Python code in a sandbox and return stdout.",
+  schema: z.object({ code: z.string() }),
+});
+
+// Specialists: each is a ReAct agent with its own tools and prompt
+const researcher = createAgent({ model: llm, tools: [webSearch], systemPrompt: "You are a researcher. Cite sources." });
+const coder = createAgent({ model: llm, tools: [runPython], systemPrompt: "You write and run Python to answer questions." });
+
+const State = Annotation.Root({
+  ...MessagesAnnotation.spec,
+  turns: Annotation<number>({ reducer: (_a, b) => b, default: () => 0 }),
+});
+
+const Route = z.object({ next: z.enum(["researcher", "coder", "FINISH"]) });
+
+async function supervisor(state: typeof State.State) {
+  if (state.turns >= MAX_TURNS) return new Command({ goto: END }); // budget spent: stop with what we have
+  const decision = await llm.withStructuredOutput(Route).invoke([
+    {
+      role: "system",
+      content:
+        "You manage two workers: researcher and coder. " +
+        "Pick who should act next, or FINISH when the user's request is fully answered.",
+    },
+    ...state.messages,
+  ]);
+  if (decision.next === "FINISH") return new Command({ goto: END });
+  return new Command({ goto: decision.next, update: { turns: state.turns + 1 } });
+}
+
+type Agent = { invoke(input: { messages: BaseMessage[] }): Promise<{ messages: BaseMessage[] }> };
+
+function makeWorker(agent: Agent, name: string) {
+  return async (state: typeof State.State) => {
+    const result = await agent.invoke({ messages: state.messages });
+    const reply = result.messages[result.messages.length - 1];
+    // Report back to the supervisor as a named message
+    return new Command({
+      update: { messages: [new HumanMessage({ content: reply.text, name })] },
+      goto: "supervisor",
+    });
+  };
+}
+
+const graph = new StateGraph(State)
+  .addNode("supervisor", supervisor, { ends: ["researcher", "coder", END] })
+  .addNode("researcher", makeWorker(researcher, "researcher"), { ends: ["supervisor"] })
+  .addNode("coder", makeWorker(coder, "coder"), { ends: ["supervisor"] })
+  .addEdge(START, "supervisor")
+  .compile();
+
+const result = await graph.invoke({
+  messages: [{ role: "user", content: "Find Dubai's 2025 population and plot growth since 2000" }],
+});
+// The answer is the last worker's report (a message named after that worker)
+console.log(result.messages.at(-1)?.text);
+
+// Prebuilt alternative: npm i @langchain/langgraph-supervisor
+// import { createSupervisor } from "@langchain/langgraph-supervisor";
+`,
+  examples: [
+    { company: "LinkedIn", domain: "linkedin.com", title: "Hiring Assistant: supervisor with sub-agents", url: "https://infoq.com/presentations/LinkedIn-agent-hiring-assistant" },
+    { company: "Fastweb + Vodafone", domain: "vodafone.com", title: "Super TOBi: supervisor routes to use-case agents", url: "https://blog.langchain.com/customers-vodafone-italy" },
+    { company: "Rexera", domain: "rexera.com", title: "Moved from a single agent to a multi-agent design", url: "https://blog.langchain.com/customers-rexera/" },
+    { company: "KINTO Technologies", domain: "kinto-technologies.com", title: "Multi-agent system with langgraph-supervisor", url: "https://blog.kinto-technologies.com/posts/2025-02-28-building-Multi-Agent-system-by-using-langgraph-supervisor/" },
+  ],
+},
+
+/* ------------------------------------------------------------------ 3 */
+{
+  id: "router",
+  traits: ["flow"],
+  marks: [["cls", "One decision up front, fixed branches after"], ["h", "A human branch as the fallback"]],
+  similar: [["supervisor", "an LLM picks the next step again and again, not once."], ["agentic-rag", "also a fixed graph with LLM decision points, built around retrieval."]],
+  desc: "START goes to a Router that classifies intent and branches to the Billing specialist, the Refund workflow, or Escalate to human for angry or unclear messages. Every branch goes to END.",
+  name: "Router / Controllable Workflow",
+  adoption: "Very common",
+  tagline: "A hand-designed graph where the LLM only makes a few decisions, such as which branch to take. Chosen for high-volume, customer-facing products.",
+  diagram: {
+    w: 460, h: 300,
+    nodes: [
+      { id: "s", x: 45, y: 150, label: "START", kind: "io", w: 64 },
+      { id: "cls", x: 160, y: 150, label: "Router\n(classify intent)", kind: "llm", w: 118 },
+      { id: "b", x: 305, y: 55, label: "Billing\nspecialist", kind: "llm", w: 104 },
+      { id: "r", x: 305, y: 150, label: "Refund\nworkflow", kind: "tool", w: 104 },
+      { id: "h", x: 305, y: 245, label: "Escalate\nto human", kind: "human", w: 104 },
+      { id: "e", x: 420, y: 150, label: "END", kind: "io", w: 60 },
+    ],
+    edges: [
+      ["s", "cls"],
+      ["cls", "b", { label: "billing", dashed: true }],
+      ["cls", "r", { label: "refund", dashed: true }],
+      ["cls", "h", { label: "angry / unsure", dashed: true }],
+      ["b", "e"], ["r", "e"], ["h", "e"],
+    ],
+  },
+  summary: `
+    <p>Instead of letting an agent decide everything, you write the control flow yourself and use the LLM only where judgment is needed: classifying intent, extracting fields, writing the reply. LangChain calls this a <em>controllable agent</em>. It also covers <strong>prompt chaining</strong>: fixed sequences of LLM steps with checks between them.</p>
+    <h3>How it works</h3>
+    <ol><li>A router node classifies the input with structured output.</li><li>A conditional edge sends it to a fixed branch.</li><li>Each branch is a short chain, a deterministic workflow or a small agent.</li></ol>
+    <h3>Use when</h3>
+    <ul><li>Latency, cost and predictability matter more than open-ended autonomy.</li><li>Compliance needs known paths you can audit (finance, telecom, healthcare).</li></ul>
+    <h3>Watch out for</h3>
+    <ul><li>Inputs that fit none of the branches. Always have a fallback or human branch.</li><li>The graph can sprawl as you add intents. Group them into subgraphs.</li></ul>
+    <h3>Key LangGraph pieces</h3>
+    <div class="chips"><code>add_conditional_edges</code><code>with_structured_output</code><code>TypedDict state</code></div>`,
+  pyInstall: PY_BASE,
+  py: String.raw`from typing import Literal, TypedDict
+
+from pydantic import BaseModel
+from langchain.chat_models import init_chat_model
+from langgraph.graph import StateGraph, START, END
+
+llm = init_chat_model("anthropic:claude-sonnet-5-5")
+
+
+class State(TypedDict, total=False):
+    question: str
+    intent: str
+    answer: str
+
+
+class Intent(BaseModel):
+    intent: Literal["billing", "refund", "escalate"]
+
+
+def classify(state: State):
+    result = llm.with_structured_output(Intent).invoke(
+        "Classify this customer message. Use 'escalate' if the customer is upset "
+        f"or you are unsure.\n\nMessage: {state['question']}"
+    )
+    return {"intent": result.intent}
+
+
+def billing(state: State):
+    reply = llm.invoke(f"You are a billing specialist. Answer briefly: {state['question']}")
+    return {"answer": reply.text}
+
+
+def refund(state: State):
+    # Deterministic business logic, no LLM needed
+    # order = orders_api.lookup(...); refunds_api.create(...)
+    return {"answer": "Your refund has been started and will arrive in 3-5 days."}
+
+
+def escalate(state: State):
+    # create_ticket(state["question"])
+    return {"answer": "I've passed this to a human agent who will reply shortly."}
+
+
+builder = StateGraph(State)
+builder.add_node("classify", classify)
+builder.add_node("billing", billing)
+builder.add_node("refund", refund)
+builder.add_node("escalate", escalate)
+builder.add_edge(START, "classify")
+builder.add_conditional_edges("classify", lambda s: s["intent"], ["billing", "refund", "escalate"])
+for branch in ("billing", "refund", "escalate"):
+    builder.add_edge(branch, END)
+graph = builder.compile()
+
+print(graph.invoke({"question": "Why was I charged twice?"})["answer"])
+`,
+  tsInstall: TS_BASE,
+  ts: String.raw`import { ChatAnthropic } from "@langchain/anthropic";
+import { StateGraph, Annotation, START, END } from "@langchain/langgraph";
+import { z } from "zod";
+
+const llm = new ChatAnthropic({ model: "claude-sonnet-5-5" });
+
+const State = Annotation.Root({
+  question: Annotation<string>,
+  intent: Annotation<"billing" | "refund" | "escalate">,
+  answer: Annotation<string>,
+});
+
+const Intent = z.object({ intent: z.enum(["billing", "refund", "escalate"]) });
+
+async function classify(state: typeof State.State) {
+  const result = await llm.withStructuredOutput(Intent).invoke(
+    "Classify this customer message. Use 'escalate' if the customer is upset " +
+      "or you are unsure.\n\nMessage: " + state.question
+  );
+  return { intent: result.intent };
+}
+
+async function billing(state: typeof State.State) {
+  const reply = await llm.invoke("You are a billing specialist. Answer briefly: " + state.question);
+  return { answer: reply.text };
+}
+
+async function refund(_state: typeof State.State) {
+  // Deterministic business logic, no LLM needed
+  return { answer: "Your refund has been started and will arrive in 3-5 days." };
+}
+
+async function escalate(_state: typeof State.State) {
+  // await createTicket(state.question);
+  return { answer: "I've passed this to a human agent who will reply shortly." };
+}
+
+const graph = new StateGraph(State)
+  .addNode("classify", classify)
+  .addNode("billing", billing)
+  .addNode("refund", refund)
+  .addNode("escalate", escalate)
+  .addEdge(START, "classify")
+  .addConditionalEdges("classify", (s) => s.intent, ["billing", "refund", "escalate"])
+  .addEdge("billing", END)
+  .addEdge("refund", END)
+  .addEdge("escalate", END)
+  .compile();
+
+const out = await graph.invoke({ question: "Why was I charged twice?" });
+console.log(out.answer);
+`,
+  examples: [
+    { company: "Klarna", domain: "klarna.com", title: "Support assistant for 85M users, 80% faster resolution", url: "https://blog.langchain.com/customers-klarna" },
+    { company: "AppFolio", domain: "appfolio.com", title: "Realm-X property-management copilot", url: "https://blog.langchain.com/customers-appfolio/" },
+    { company: "LinkedIn", domain: "linkedin.com", title: "SQL Bot: text-to-SQL for analytics", url: "https://www.linkedin.com/blog/engineering/ai/practical-text-to-sql-for-data-analytics" },
+  ],
+},
+
+/* ------------------------------------------------------------------ 4 */
+{
+  id: "hitl",
+  traits: ["human"],
+  marks: [["r", "The graph pauses at interrupt()"], ["cp", "State is saved so it can resume later"]],
+  similar: [["ambient", "uses the same interrupt() but is started by events, not chat."]],
+  desc: "START goes to the agent, which proposes an action. interrupt() pauses for human review and saves state in the checkpointer. Approve or edit goes to Execute action and then END; reject sends feedback back to the agent to propose again.",
+  name: "Human-in-the-Loop",
+  adoption: "Very common",
+  tagline: "The graph pauses before risky actions so a person can approve, edit or reject, then resumes from saved state. You add this layer on top of any other pattern.",
+  diagram: {
+    w: 460, h: 300,
+    nodes: [
+      { id: "s", x: 60, y: 50, label: "START", kind: "io", w: 70 },
+      { id: "p", x: 200, y: 50, label: "Agent proposes\naction", kind: "llm", w: 130 },
+      { id: "r", x: 200, y: 160, label: "interrupt()\nhuman review", kind: "human", w: 130 },
+      { id: "cp", x: 405, y: 160, label: "Checkpointer\n(saved state)", kind: "data", w: 98 },
+      { id: "x", x: 200, y: 260, label: "Execute action", kind: "tool", w: 130 },
+      { id: "e", x: 375, y: 260, label: "END", kind: "io", w: 70 },
+    ],
+    edges: [
+      ["s", "p"],
+      ["p", "r"],
+      ["r", "x", { label: "approve / edit", dashed: true }],
+      ["r", "p", { label: "reject + feedback", dashed: true, bend: 70 }],
+      ["r", "cp", { label: "pause / resume", dashed: true, both: true }],
+      ["x", "e"],
+    ],
+  },
+  summary: `
+    <p>Calling <code>interrupt()</code> inside a node stops the graph, saves its full state to a checkpointer and returns a payload to your app. Later (seconds or days), you resume the same thread with <code>Command(resume=...)</code> and the node continues with the human's answer.</p>
+    <h3>Common patterns</h3>
+    <ul><li><strong>Approve / reject</strong> before tools that send money, emails or write to production.</li><li><strong>Edit</strong> the agent's draft or tool arguments before running.</li><li><strong>Ask</strong>: the agent asks the human a question mid-task.</li><li><strong>Handover</strong> to a human operator (support bots).</li></ul>
+    <h3>Use when</h3>
+    <ul><li>Actions can't be undone or face customers.</li><li>You're building trust in a new agent before giving it full autonomy.</li></ul>
+    <h3>Watch out for</h3>
+    <ul><li>You need a durable checkpointer (Postgres) in production, not in-memory.</li><li>The node reruns from its start when resumed, so keep side effects after the <code>interrupt()</code> call.</li></ul>
+    <h3>Key LangGraph pieces</h3>
+    <div class="chips"><code>interrupt()</code><code>Command(resume=...)</code><code>checkpointer</code><code>thread_id</code></div>`,
+  pyInstall: PY_BASE + " langgraph-checkpoint-postgres",
+  py: String.raw`from typing import Literal, TypedDict
+
+from langchain.chat_models import init_chat_model
+from langgraph.checkpoint.memory import InMemorySaver  # use PostgresSaver in production
+from langgraph.graph import StateGraph, START, END
+from langgraph.types import Command, interrupt
+
+llm = init_chat_model("anthropic:claude-sonnet-5-5")
+
+
+class State(TypedDict, total=False):
+    request: str
+    draft: str
+    feedback: str
+    result: str
+
+
+def propose(state: State):
+    prompt = f"Draft a short reply email for this request: {state['request']}"
+    if state.get("feedback"):
+        prompt += f"\nA reviewer rejected the last draft: {state['feedback']}"
+    return {"draft": llm.invoke(prompt).text}
+
+
+def human_review(state: State) -> Command[Literal["send", "propose"]]:
+    # Pauses the graph here; the payload goes to your UI or API caller
+    decision = interrupt({"draft": state["draft"], "question": "approve, edit or reject?"})
+    if decision["action"] == "approve":
+        return Command(goto="send")
+    if decision["action"] == "edit":
+        # Keep the original draft if the reviewer sent no text
+        return Command(update={"draft": decision.get("text") or state["draft"]}, goto="send")
+    return Command(update={"feedback": decision.get("text", "")}, goto="propose")
+
+
+def send(state: State):
+    # email_client.send(state["draft"])  <- the risky side effect
+    return {"result": "sent"}
+
+
+builder = StateGraph(State)
+builder.add_node("propose", propose)
+builder.add_node("human_review", human_review)
+builder.add_node("send", send)
+builder.add_edge(START, "propose")
+builder.add_edge("propose", "human_review")
+builder.add_edge("send", END)
+graph = builder.compile(checkpointer=InMemorySaver())
+
+config = {"configurable": {"thread_id": "ticket-42"}}
+paused = graph.invoke({"request": "Customer asks to cancel and get a refund"}, config)
+print(paused["__interrupt__"])  # show the draft to a human
+
+# ...later, in another request, once the human decides:
+graph.invoke(Command(resume={"action": "approve"}), config)
+`,
+  tsInstall: TS_BASE,
+  ts: String.raw`import { ChatAnthropic } from "@langchain/anthropic";
+import { StateGraph, Annotation, Command, MemorySaver, interrupt, START, END } from "@langchain/langgraph";
+
+const llm = new ChatAnthropic({ model: "claude-sonnet-5-5" });
+
+const State = Annotation.Root({
+  request: Annotation<string>,
+  draft: Annotation<string>,
+  feedback: Annotation<string>,
+  result: Annotation<string>,
+});
+
+type Decision = { action: "approve" | "edit" | "reject"; text?: string };
+
+async function propose(state: typeof State.State) {
+  let prompt = "Draft a short reply email for this request: " + state.request;
+  if (state.feedback) prompt += "\nA reviewer rejected the last draft: " + state.feedback;
+  const res = await llm.invoke(prompt);
+  return { draft: res.text };
+}
+
+async function humanReview(state: typeof State.State) {
+  // Pauses the graph here; the payload goes to your UI or API caller
+  const decision = interrupt({ draft: state.draft, question: "approve, edit or reject?" }) as Decision;
+  if (decision.action === "approve") return new Command({ goto: "send" });
+  if (decision.action === "edit") {
+    // Keep the original draft if the reviewer sent no text
+    return new Command({ update: { draft: decision.text || state.draft }, goto: "send" });
+  }
+  return new Command({ update: { feedback: decision.text ?? "" }, goto: "propose" });
+}
+
+async function send(_state: typeof State.State) {
+  // await emailClient.send(state.draft)  <- the risky side effect
+  return { result: "sent" };
+}
+
+const graph = new StateGraph(State)
+  .addNode("propose", propose)
+  .addNode("human_review", humanReview, { ends: ["send", "propose"] })
+  .addNode("send", send)
+  .addEdge(START, "propose")
+  .addEdge("propose", "human_review")
+  .addEdge("send", END)
+  .compile({ checkpointer: new MemorySaver() }); // use PostgresSaver in production
+
+const config = { configurable: { thread_id: "ticket-42" } };
+await graph.invoke({ request: "Customer asks to cancel and get a refund" }, config);
+const snapshot = await graph.getState(config);
+console.log(snapshot.tasks.flatMap((t) => t.interrupts)); // show the draft to a human
+
+// ...later, once the human decides:
+await graph.invoke(new Command({ resume: { action: "approve" } }), config);
+`,
+  examples: [
+    { company: "Replit", domain: "replit.com", title: "Replit Agent: manager, editor and verifier agents with user checkpoints", url: "https://www.langchain.com/blog/customers-replit" },
+    { company: "Fastweb + Vodafone", domain: "vodafone.com", title: "Handover to a human operator", url: "https://blog.langchain.com/customers-vodafone-italy" },
+    { company: "LangChain", ref: true, domain: "langchain.com", title: "Ambient email assistant: notify / question / review", url: "https://blog.langchain.com/introducing-ambient-agents" },
+  ],
+},
+
+/* ------------------------------------------------------------------ 5 */
+{
+  id: "orchestrator",
+  traits: ["parallel", "plans"],
+  marks: [["o", "The number of workers is decided at runtime"], ["syn", "Results are merged once, at the end"]],
+  similar: [["llmcompiler", "runs tool calls in parallel with dependencies between them, not independent workers."], ["supervisor", "workers take turns instead of running at once."]],
+  desc: "START goes to the Orchestrator, which plans subtasks and uses Send() to start Worker 1 through Worker N in parallel. All workers feed the Synthesizer, which combines their results and goes to END.",
+  name: "Orchestrator-Worker (Map-Reduce)",
+  adoption: "Common",
+  tagline: "An orchestrator splits the task at runtime, workers run in parallel and a synthesizer combines their output. This is the standard design for deep-research agents.",
+  diagram: {
+    w: 440, h: 300,
+    nodes: [
+      { id: "s", x: 220, y: 25, label: "START", kind: "io", w: 70, h: 28 },
+      { id: "o", x: 220, y: 95, label: "Orchestrator\n(plans subtasks)", kind: "llm", w: 140 },
+      { id: "w1", x: 85, y: 185, label: "Worker 1", kind: "llm", w: 100 },
+      { id: "w2", x: 220, y: 185, label: "Worker 2", kind: "llm", w: 100 },
+      { id: "w3", x: 355, y: 185, label: "Worker N", kind: "llm", w: 100 },
+      { id: "syn", x: 220, y: 268, label: "Synthesizer (reduce)", kind: "llm", w: 160, h: 38 },
+      { id: "e", x: 385, y: 268, label: "END", kind: "io", w: 64 },
+    ],
+    edges: [
+      ["s", "o"],
+      ["o", "w1", { label: "Send()", dashed: true }], ["o", "w2", { dashed: true }], ["o", "w3", { label: "Send()", dashed: true }],
+      ["w1", "syn"], ["w2", "syn"], ["w3", "syn"],
+      ["syn", "e"],
+    ],
+  },
+  summary: `
+    <p>The orchestrator LLM breaks the task into a <em>variable</em> number of subtasks at runtime. LangGraph's <code>Send</code> API starts one worker per subtask, all in parallel, each with its own input. A reducer on the shared state collects the results, and a final node combines them.</p>
+    <h3>How it works</h3>
+    <ol><li>The orchestrator returns a plan as structured output (sections, sub-questions, files).</li><li>A conditional edge returns <code>[Send("worker", {...}) for each item]</code>.</li><li>Workers write to a list field with an <code>operator.add</code> reducer.</li><li>The synthesizer runs once all workers have finished.</li></ol>
+    <h3>Use when</h3>
+    <ul><li>You can't know the subtasks in advance: research reports, editing many files, due diligence across many documents.</li><li>Parallel work cuts wall-clock time.</li></ul>
+    <h3>Watch out for</h3>
+    <ul><li>Running many workers at once can hit API rate limits. Set <code>max_concurrency</code>.</li><li>Workers can't see each other's work, so duplicated or contradicting results are common. Give the synthesizer a de-duplication step.</li></ul>
+    <h3>Key LangGraph pieces</h3>
+    <div class="chips"><code>Send</code><code>Annotated[list, operator.add]</code><code>with_structured_output</code></div>`,
+  pyInstall: PY_BASE,
+  py: String.raw`import operator
+from typing import Annotated, TypedDict
+
+from pydantic import BaseModel
+from langchain.chat_models import init_chat_model
+from langgraph.graph import StateGraph, START, END
+from langgraph.types import Send
+
+llm = init_chat_model("anthropic:claude-sonnet-5-5")
+
+
+class Section(BaseModel):
+    name: str
+    description: str
+
+
+class Plan(BaseModel):
+    sections: list[Section]
+
+
+class State(TypedDict, total=False):
+    topic: str
+    sections: list[Section]
+    completed: Annotated[list[str], operator.add]  # parallel workers append here
+    report: str
+
+
+class WorkerState(TypedDict):
+    section: Section
+
+
+def orchestrator(state: State):
+    plan = llm.with_structured_output(Plan).invoke(
+        f"Plan 3-6 sections for a research report on: {state['topic']}"
+    )
+    return {"sections": plan.sections}
+
+
+def worker(state: WorkerState):
+    s = state["section"]
+    text = llm.invoke(f"Write the report section '{s.name}': {s.description}").text
+    return {"completed": [f"## {s.name}\n\n{text}"]}
+
+
+def assign_workers(state: State):
+    if not state["sections"]:
+        return "synthesizer"  # nothing to fan out: go straight to the reduce step
+    # Map step: one Send per section; they all run in parallel
+    return [Send("worker", {"section": s}) for s in state["sections"]]
+
+
+def synthesizer(state: State):
+    # Reduce step: runs after every worker has finished
+    return {"report": "\n\n".join(state.get("completed", [])) or "No sections were planned."}
+
+
+builder = StateGraph(State)
+builder.add_node("orchestrator", orchestrator)
+builder.add_node("worker", worker)
+builder.add_node("synthesizer", synthesizer)
+builder.add_edge(START, "orchestrator")
+builder.add_conditional_edges("orchestrator", assign_workers, ["worker", "synthesizer"])
+builder.add_edge("worker", "synthesizer")
+builder.add_edge("synthesizer", END)
+graph = builder.compile()
+
+out = graph.invoke({"topic": "LangGraph adoption in fintech"}, {"max_concurrency": 5})
+print(out["report"])
+`,
+  tsInstall: TS_BASE,
+  ts: String.raw`import { ChatAnthropic } from "@langchain/anthropic";
+import { StateGraph, Annotation, Send, START, END } from "@langchain/langgraph";
+import { z } from "zod";
+
+const llm = new ChatAnthropic({ model: "claude-sonnet-5-5" });
+
+const Section = z.object({ name: z.string(), description: z.string() });
+const Plan = z.object({ sections: z.array(Section) });
+type SectionT = z.infer<typeof Section>;
+
+const State = Annotation.Root({
+  topic: Annotation<string>,
+  sections: Annotation<SectionT[]>,
+  // parallel workers append here
+  completed: Annotation<string[]>({ reducer: (a, b) => a.concat(b), default: () => [] }),
+  report: Annotation<string>,
+});
+
+async function orchestrator(state: typeof State.State) {
+  const plan = await llm.withStructuredOutput(Plan).invoke(
+    "Plan 3-6 sections for a research report on: " + state.topic
+  );
+  return { sections: plan.sections };
+}
+
+async function worker(state: { section: SectionT }) {
+  const s = state.section;
+  const res = await llm.invoke("Write the report section '" + s.name + "': " + s.description);
+  return { completed: ["## " + s.name + "\n\n" + res.text] };
+}
+
+// Map step: one Send per section; they all run in parallel
+const assignWorkers = (state: typeof State.State) =>
+  state.sections.length === 0
+    ? "synthesizer" // nothing to fan out: go straight to the reduce step
+    : state.sections.map((section) => new Send("worker", { section }));
+
+// Reduce step: runs after every worker has finished
+async function synthesizer(state: typeof State.State) {
+  return { report: state.completed.join("\n\n") || "No sections were planned." };
+}
+
+const graph = new StateGraph(State)
+  .addNode("orchestrator", orchestrator)
+  .addNode("worker", worker)
+  .addNode("synthesizer", synthesizer)
+  .addEdge(START, "orchestrator")
+  .addConditionalEdges("orchestrator", assignWorkers, ["worker", "synthesizer"])
+  .addEdge("worker", "synthesizer")
+  .addEdge("synthesizer", END)
+  .compile();
+
+const out = await graph.invoke({ topic: "LangGraph adoption in fintech" }, { maxConcurrency: 5 });
+console.log(out.report);
+`,
+  examples: [
+    { company: "Exa", domain: "exa.ai", title: "Deep research: planner, parallel tasks, observer", url: "https://blog.langchain.com/exa" },
+    { company: "GPT Researcher", domain: "github.com", title: "Open-source multi-agent researcher on LangGraph", url: "https://github.com/assafelovic/gpt-researcher/blob/master/docs/blog/2024-05-19-gptr-langgraph/index.md" },
+    { company: "Athena Intelligence", domain: "athenaintel.com", title: "Research agent platform", url: "https://blog.langchain.com/customers-athena-intelligence/" },
+  ],
+},
+
+/* ------------------------------------------------------------------ 6 */
+{
+  id: "network",
+  traits: ["specialists"],
+  marks: [["b", "No hub: any agent can hand off to any other"], ["c", "An agent, not a router, decides when to stop"]],
+  similar: [["supervisor", "same specialists, but control always returns to a central hub."], ["swarm", "a packaged version of hub-less handoffs, built for conversations."]],
+  desc: "START goes to the Analyzer agent. The Analyzer, Generator and Validator agents hand work directly to each other in any direction, with no supervisor. The Validator goes to END when the result is valid.",
+  name: "Multi-Agent Network",
+  adoption: "Common",
+  tagline: "Specialist agents pass work to each other directly, with no central supervisor. Common in developer-tooling pipelines.",
+  diagram: {
+    w: 440, h: 290,
+    nodes: [
+      { id: "s", x: 60, y: 60, label: "START", kind: "io", w: 70 },
+      { id: "a", x: 200, y: 60, label: "Analyzer\nagent", kind: "llm", w: 110 },
+      { id: "b", x: 360, y: 150, label: "Generator\nagent", kind: "llm", w: 110 },
+      { id: "c", x: 200, y: 245, label: "Validator\nagent", kind: "llm", w: 110 },
+      { id: "e", x: 60, y: 245, label: "END", kind: "io", w: 70 },
+    ],
+    edges: [
+      ["s", "a"],
+      ["a", "b", { bend: 16 }], ["b", "a", { bend: 16 }],
+      ["b", "c", { bend: 16 }], ["c", "b", { label: "fix", bend: 16 }],
+      ["c", "a", { label: "re-analyze", bend: 22, dashed: true }], ["a", "c", { bend: 22, dashed: true }],
+      ["c", "e", { label: "valid", dashed: true }],
+    ],
+  },
+  summary: `
+    <p>Each agent does its job and then decides who goes next, using <code>Command(goto=...)</code>. No single node is in charge, so control follows the work itself. Uber's developer tools use specialist agents, including deterministic checkers and an LLM critic, to generate and validate tests.</p>
+    <h3>How it works</h3>
+    <ol><li>Every agent node returns its output plus the name of the next agent (or FINISH).</li><li>Agents share the message history, so each one sees prior work.</li><li>The loop ends when an agent decides the work is done, or when the recursion limit is hit.</li></ol>
+    <h3>Use when</h3>
+    <ul><li>There's no natural hierarchy and the next step depends on what was found.</li><li>You want to plug in reusable, domain-specific agents (Uber reuses its agents across tools).</li></ul>
+    <h3>Watch out for</h3>
+    <ul><li>Ping-pong loops between agents. Cap the number of turns in state, and keep <code>recursion_limit</code> as a backstop.</li><li>It's harder to debug than a supervisor, so trace everything (LangSmith).</li></ul>
+    <h3>Key LangGraph pieces</h3>
+    <div class="chips"><code>Command(goto=...)</code><code>recursion_limit</code><code>MessagesState</code></div>`,
+  pyInstall: PY_BASE,
+  py: String.raw`from typing import Literal
+
+from pydantic import BaseModel
+from langchain.chat_models import init_chat_model
+from langchain_core.messages import HumanMessage
+from langgraph.graph import StateGraph, MessagesState, START, END
+from langgraph.types import Command
+
+llm = init_chat_model("anthropic:claude-sonnet-5-5")
+MAX_TURNS = 8  # total agent turns before the network stops itself
+
+AGENTS = Literal["analyzer", "generator", "validator", "FINISH"]
+
+
+class State(MessagesState):
+    turns: int
+
+
+class Turn(BaseModel):
+    response: str
+    goto: AGENTS
+
+
+def make_agent(name: str, role: str):
+    def node(state: State) -> Command[Literal["analyzer", "generator", "validator", "__end__"]]:
+        system = {
+            "role": "system",
+            "content": f"You are the {name} agent. {role} "
+                       "Write your contribution in 'response', then set 'goto' to the agent "
+                       "that should act next (analyzer, generator, validator) or FINISH.",
+        }
+        turn = llm.with_structured_output(Turn).invoke([system] + state["messages"])
+        turns = state.get("turns", 0) + 1
+        # Stop on FINISH, or when the turn budget is spent (prevents ping-pong loops)
+        done = turn.goto == "FINISH" or turns >= MAX_TURNS
+        return Command(
+            update={"messages": [HumanMessage(content=turn.response, name=name)], "turns": turns},
+            goto=END if done else turn.goto,
+        )
+    return node
+
+
+builder = StateGraph(State)
+builder.add_node("analyzer", make_agent("analyzer", "Work out what the code change must do and which edge cases matter."))
+builder.add_node("generator", make_agent("generator", "Write the code and unit tests."))
+builder.add_node("validator", make_agent("validator", "Check the tests: assertions, conventions, coverage. Send back problems."))
+builder.add_edge(START, "analyzer")
+graph = builder.compile()
+
+result = graph.invoke(
+    {"messages": [{"role": "user", "content": "Add unit tests for parse_invoice() in billing/parser.py"}]}
+)
+# The last agent's contribution (a message named after that agent) is the outcome
+print(result["messages"][-1].text)
+`,
+  tsInstall: TS_BASE,
+  ts: String.raw`import { ChatAnthropic } from "@langchain/anthropic";
+import { HumanMessage } from "@langchain/core/messages";
+import { StateGraph, MessagesAnnotation, Annotation, Command, START, END } from "@langchain/langgraph";
+import { z } from "zod";
+
+const llm = new ChatAnthropic({ model: "claude-sonnet-5-5" });
+const MAX_TURNS = 8; // total agent turns before the network stops itself
+
+const State = Annotation.Root({
+  ...MessagesAnnotation.spec,
+  turns: Annotation<number>({ reducer: (_a, b) => b, default: () => 0 }),
+});
+
+const Turn = z.object({
+  response: z.string(),
+  goto: z.enum(["analyzer", "generator", "validator", "FINISH"]),
+});
+
+function makeAgent(name: string, role: string) {
+  return async (state: typeof State.State) => {
+    const turn = await llm.withStructuredOutput(Turn).invoke([
+      {
+        role: "system",
+        content:
+          "You are the " + name + " agent. " + role +
+          " Write your contribution in 'response', then set 'goto' to the agent " +
+          "that should act next (analyzer, generator, validator) or FINISH.",
+      },
+      ...state.messages,
+    ]);
+    const turns = state.turns + 1;
+    // Stop on FINISH, or when the turn budget is spent (prevents ping-pong loops)
+    const done = turn.goto === "FINISH" || turns >= MAX_TURNS;
+    return new Command({
+      update: { messages: [new HumanMessage({ content: turn.response, name })], turns },
+      goto: done ? END : turn.goto,
+    });
+  };
+}
+
+const ends = ["analyzer", "generator", "validator", END];
+
+const graph = new StateGraph(State)
+  .addNode("analyzer", makeAgent("analyzer", "Work out what the code change must do and which edge cases matter."), { ends })
+  .addNode("generator", makeAgent("generator", "Write the code and unit tests."), { ends })
+  .addNode("validator", makeAgent("validator", "Check the tests: assertions, conventions, coverage. Send back problems."), { ends })
+  .addEdge(START, "analyzer")
+  .compile();
+
+const result = await graph.invoke({
+  messages: [{ role: "user", content: "Add unit tests for parseInvoice() in billing/parser.ts" }],
+});
+// The last agent's contribution (a message named after that agent) is the outcome
+console.log(result.messages.at(-1)?.text);
+`,
+  examples: [
+    { company: "Uber", domain: "uber.com", title: "Validator & AutoCover: test generation with sub-agents", url: "https://www.zenml.io/llmops-database/building-ai-developer-tools-using-langgraph-for-large-scale-software-development" },
+    { company: "Elastic", domain: "elastic.co", title: "Attack Discovery & Automatic Import (SecOps)", url: "https://www.elastic.co/blog/building-automatic-import-attack-discovery-langchain" },
+  ],
+},
+
+/* ------------------------------------------------------------------ 7 */
+{
+  id: "plan-execute",
+  traits: ["plans", "single"],
+  marks: [["p", "The whole plan is written before acting"], ["r", "The plan is revised after every step"]],
+  similar: [["llmcompiler", "plans a dependency graph and runs independent steps in parallel."], ["orchestrator", "splits work into parallel subtasks rather than ordered steps."]],
+  desc: "START goes to the Planner, which sends step 1 to the Executor, a ReAct agent that calls tools. The result goes to the Re-planner, which sends the next step back to the Executor, or goes to END when done.",
+  name: "Plan-and-Execute",
+  adoption: "Common",
+  tagline: "Write a step-by-step plan, run each step with an executor, then revise the plan based on what was learned.",
+  diagram: {
+    w: 440, h: 300,
+    nodes: [
+      { id: "s", x: 60, y: 45, label: "START", kind: "io", w: 70 },
+      { id: "p", x: 210, y: 45, label: "Planner", kind: "llm", w: 120 },
+      { id: "x", x: 210, y: 150, label: "Executor\n(ReAct agent)", kind: "llm", w: 120 },
+      { id: "t", x: 375, y: 150, label: "Tools", kind: "tool", w: 90 },
+      { id: "r", x: 210, y: 255, label: "Re-planner", kind: "llm", w: 120 },
+      { id: "e", x: 375, y: 255, label: "END", kind: "io", w: 70 },
+    ],
+    edges: [
+      ["s", "p"],
+      ["p", "x", { label: "step 1" }],
+      ["x", "t", { bend: 16 }], ["t", "x", { bend: 16 }],
+      ["x", "r", { label: "result" }],
+      ["r", "x", { label: "next step", dashed: true, bend: -70 }],
+      ["r", "e", { label: "done", dashed: true }],
+    ],
+  },
+  summary: `
+    <p>Rather than deciding one action at a time, a planner writes the whole plan up front. An executor (usually a ReAct agent) carries out one step at a time, and a re-planner looks at the results and either updates the remaining steps or returns the final answer.</p>
+    <h3>How it works</h3>
+    <ol><li>The planner returns <code>steps: list[str]</code>.</li><li>The executor runs the first step with tools.</li><li>The re-planner sees the goal, completed steps and remaining plan, then updates the plan or finishes.</li></ol>
+    <h3>Variants</h3>
+    <ul><li><strong>ReWOO</strong>: plans all tool calls at once with variable references, with no re-planning and fewer LLM calls.</li><li><strong>LLMCompiler</strong>: plans a DAG and runs it in parallel (see #10).</li></ul>
+    <h3>Use when</h3>
+    <ul><li>Multi-step tasks where a plain ReAct agent loses track of the goal.</li><li>You want to show the plan to a human before it runs.</li></ul>
+    <h3>Watch out for</h3>
+    <ul><li>Running steps one after another is slow; use orchestrator-worker if steps are independent.</li><li>Rigid plans, so always include the re-plan step.</li></ul>
+    <h3>Key LangGraph pieces</h3>
+    <div class="chips"><code>with_structured_output</code><code>create_agent</code><code>add_conditional_edges</code></div>`,
+  pyInstall: PY_BASE,
+  py: String.raw`import operator
+from typing import Annotated, TypedDict
+
+from pydantic import BaseModel
+from langchain.agents import create_agent
+from langchain.chat_models import init_chat_model
+from langchain_core.tools import tool
+from langgraph.graph import StateGraph, START, END
+
+llm = init_chat_model("anthropic:claude-sonnet-5-5")
+MAX_STEPS = 6  # executed steps before the re-planner must answer
+
+
+@tool
+def web_search(query: str) -> str:
+    """Search the web."""
+    return f"(top results for {query})"
+
+
+executor = create_agent(llm, tools=[web_search])
+
+
+class Plan(BaseModel):
+    steps: list[str]
+
+
+class Replan(BaseModel):
+    steps: list[str] = []       # remaining steps
+    final_answer: str = ""      # set when the goal is met
+
+
+class State(TypedDict, total=False):
+    input: str
+    plan: list[str]
+    past_steps: Annotated[list[tuple[str, str]], operator.add]
+    response: str
+
+
+def planner(state: State):
+    plan = llm.with_structured_output(Plan).invoke(
+        f"Write a short step-by-step plan to accomplish: {state['input']}"
+    )
+    return {"plan": plan.steps}
+
+
+def execute(state: State):
+    step = state["plan"][0]
+    # Give the executor the goal and earlier results, so later steps can build on them
+    done = "\n".join(f"- {s}: {r}" for s, r in state.get("past_steps", [])) or "(nothing yet)"
+    task = f"Goal: {state['input']}\nCompleted so far:\n{done}\n\nDo this step now: {step}"
+    result = executor.invoke({"messages": [{"role": "user", "content": task}]})
+    return {"past_steps": [(step, result["messages"][-1].text)]}
+
+
+def replan(state: State):
+    out = llm.with_structured_output(Replan).invoke(
+        f"Goal: {state['input']}\n"
+        f"Completed steps and results: {state['past_steps']}\n"
+        f"Remaining plan: {state['plan'][1:]}\n"
+        "Return the updated remaining steps, or final_answer if the goal is met."
+    )
+    if out.final_answer or not out.steps or len(state["past_steps"]) >= MAX_STEPS:
+        return {"response": out.final_answer or state["past_steps"][-1][1]}
+    return {"plan": out.steps}
+
+
+builder = StateGraph(State)
+builder.add_node("planner", planner)
+builder.add_node("execute", execute)
+builder.add_node("replan", replan)
+builder.add_edge(START, "planner")
+builder.add_edge("planner", "execute")
+builder.add_edge("execute", "replan")
+builder.add_conditional_edges("replan", lambda s: END if s.get("response") else "execute", ["execute", END])
+graph = builder.compile()
+
+print(graph.invoke({"input": "Who won the 2024 Dubai Marathon and what was their pace per km?"})["response"])
+`,
+  tsInstall: TS_BASE + " langchain",
+  ts: String.raw`import { ChatAnthropic } from "@langchain/anthropic";
+import { tool } from "@langchain/core/tools";
+import { StateGraph, Annotation, START, END } from "@langchain/langgraph";
+import { createAgent } from "langchain";
+import { z } from "zod";
+
+const llm = new ChatAnthropic({ model: "claude-sonnet-5-5" });
+const MAX_STEPS = 6; // executed steps before the re-planner must answer
+
+const webSearch = tool(async ({ query }) => "(top results for " + query + ")", {
+  name: "web_search",
+  description: "Search the web.",
+  schema: z.object({ query: z.string() }),
+});
+
+const executor = createAgent({ model: llm, tools: [webSearch] });
+
+const Plan = z.object({ steps: z.array(z.string()) });
+const Replan = z.object({
+  steps: z.array(z.string()).describe("remaining steps"),
+  finalAnswer: z.string().optional().describe("set when the goal is met"),
+});
+
+const State = Annotation.Root({
+  input: Annotation<string>,
+  plan: Annotation<string[]>,
+  pastSteps: Annotation<[string, string][]>({ reducer: (a, b) => a.concat(b), default: () => [] }),
+  response: Annotation<string>,
+});
+
+async function planner(state: typeof State.State) {
+  const plan = await llm.withStructuredOutput(Plan).invoke(
+    "Write a short step-by-step plan to accomplish: " + state.input
+  );
+  return { plan: plan.steps };
+}
+
+async function execute(state: typeof State.State) {
+  const step = state.plan[0];
+  // Give the executor the goal and earlier results, so later steps can build on them
+  const done = state.pastSteps.map(([s, r]) => "- " + s + ": " + r).join("\n") || "(nothing yet)";
+  const task = "Goal: " + state.input + "\nCompleted so far:\n" + done + "\n\nDo this step now: " + step;
+  const result = await executor.invoke({ messages: [{ role: "user", content: task }] });
+  const last = result.messages[result.messages.length - 1];
+  return { pastSteps: [[step, last.text] as [string, string]] };
+}
+
+async function replan(state: typeof State.State) {
+  const out = await llm.withStructuredOutput(Replan).invoke(
+    "Goal: " + state.input +
+      "\nCompleted steps and results: " + JSON.stringify(state.pastSteps) +
+      "\nRemaining plan: " + JSON.stringify(state.plan.slice(1)) +
+      "\nReturn the updated remaining steps, or finalAnswer if the goal is met."
+  );
+  if (out.finalAnswer || out.steps.length === 0 || state.pastSteps.length >= MAX_STEPS) {
+    return { response: out.finalAnswer || state.pastSteps[state.pastSteps.length - 1][1] };
+  }
+  return { plan: out.steps };
+}
+
+const graph = new StateGraph(State)
+  .addNode("planner", planner)
+  .addNode("execute", execute)
+  .addNode("replan", replan)
+  .addEdge(START, "planner")
+  .addEdge("planner", "execute")
+  .addEdge("execute", "replan")
+  .addConditionalEdges("replan", (s) => (s.response ? END : "execute"), ["execute", END])
+  .compile();
+
+const out = await graph.invoke({ input: "Who won the 2024 Dubai Marathon and what was their pace per km?" });
+console.log(out.response);
+`,
+  examples: [
+    { company: "LinkedIn", domain: "linkedin.com", title: "Hiring Assistant: supervisor runs a plan-and-execute loop", url: "https://www.zenml.io/llmops-database/building-linkedin-s-first-production-agent-hiring-assistant-platform-and-architecture" },
+    { company: "Exa", domain: "exa.ai", title: "Planner generates research tasks", url: "https://blog.langchain.com/exa" },
+    { company: "LangChain", ref: true, domain: "langchain.com", title: "Reference: Plan-and-execute, ReWOO, LLMCompiler", url: "https://www.langchain.com/blog/planning-agents" },
+  ],
+},
+
+/* ------------------------------------------------------------------ 8 */
+{
+  id: "reflection",
+  traits: ["checks", "single"],
+  marks: [["c", "Draft, critique, revise: a closed loop"], ["t", "The critique is grounded in tests or search"]],
+  similar: [["agentic-rag", "its grounding check is a reflection loop applied to retrieved answers."]],
+  desc: "START goes to the Generator, which sends a draft to the Critic. The Critic, using evidence from tests, linters or search, sends a critique back for revision, or goes to END when the draft passes or the iteration limit is reached.",
+  name: "Reflection / Evaluator-Optimizer",
+  adoption: "Common",
+  tagline: "A generator writes a draft and a critic grades it. The draft is revised until it passes. Usually one part of a larger system rather than the whole system.",
+  diagram: {
+    w: 440, h: 280,
+    nodes: [
+      { id: "s", x: 110, y: 40, label: "START", kind: "io", w: 70 },
+      { id: "g", x: 110, y: 150, label: "Generator", kind: "llm", w: 120 },
+      { id: "c", x: 330, y: 150, label: "Critic /\nevaluator", kind: "llm", w: 120 },
+      { id: "t", x: 330, y: 40, label: "Tests, linters,\nsearch (grounding)", kind: "tool", w: 130 },
+      { id: "e", x: 330, y: 250, label: "END", kind: "io", w: 70 },
+    ],
+    edges: [
+      ["s", "g"],
+      ["g", "c", { label: "draft", bend: -32 }],
+      ["c", "g", { label: "critique → revise", dashed: true, bend: -32 }],
+      ["t", "c", { label: "evidence", dashed: true }],
+      ["c", "e", { label: "pass / max iters", dashed: true }],
+    ],
+  },
+  summary: `
+    <p>Output quality improves when a second LLM call (or a deterministic check) reviews the first and sends specific feedback. The loop stops when the critic approves or a maximum number of iterations is reached.</p>
+    <h3>Variants</h3>
+    <ul><li><strong>Basic reflection</strong>: an LLM critiques an LLM.</li><li><strong>Reflexion</strong>: the critique is grounded in outside evidence such as test results, search or a compiler. This works much better in practice.</li><li><strong>LATS</strong>: tree search over candidate answers with reflection. Powerful but expensive, and mostly used in research.</li></ul>
+    <h3>Use when</h3>
+    <ul><li>You have clear criteria or a checker: code (run the tests), SQL (run the query), writing to a style guide.</li><li>Quality matters more than latency.</li></ul>
+    <h3>Watch out for</h3>
+    <ul><li>An LLM critiquing itself can approve its own mistakes. Ground the critique in real checks when you can.</li><li>Every loop costs tokens, so always cap the number of iterations.</li></ul>
+    <h3>Key LangGraph pieces</h3>
+    <div class="chips"><code>conditional loop edge</code><code>with_structured_output</code><code>iteration counter in state</code></div>`,
+  pyInstall: PY_BASE,
+  py: String.raw`from typing import TypedDict
+
+from pydantic import BaseModel
+from langchain.chat_models import init_chat_model
+from langgraph.graph import StateGraph, START, END
+
+llm = init_chat_model("anthropic:claude-sonnet-5-5")
+MAX_ITERATIONS = 3
+
+
+class State(TypedDict, total=False):
+    task: str
+    draft: str
+    critique: str
+    iterations: int
+
+
+class Review(BaseModel):
+    passed: bool
+    critique: str
+
+
+def generate(state: State):
+    prompt = f"Task: {state['task']}"
+    if state.get("critique"):
+        prompt += f"\n\nYour previous draft:\n{state['draft']}\n\nFix these issues:\n{state['critique']}"
+    return {"draft": llm.invoke(prompt).text, "iterations": state.get("iterations", 0) + 1}
+
+
+def reflect(state: State):
+    # Reflexion-style: add real evidence here (test output, linter, search results)
+    # test_report = run_tests(state["draft"])
+    review = llm.with_structured_output(Review).invoke(
+        f"Strictly review this answer to the task '{state['task']}'. "
+        f"Pass it only if it is correct and complete.\n\n{state['draft']}"
+    )
+    return {"critique": "" if review.passed else review.critique}
+
+
+def should_continue(state: State):
+    if not state["critique"] or state["iterations"] >= MAX_ITERATIONS:
+        return END
+    return "generate"
+
+
+builder = StateGraph(State)
+builder.add_node("generate", generate)
+builder.add_node("reflect", reflect)
+builder.add_edge(START, "generate")
+builder.add_edge("generate", "reflect")
+builder.add_conditional_edges("reflect", should_continue, ["generate", END])
+graph = builder.compile()
+
+out = graph.invoke({"task": "Write a SQL query for monthly active users from events(user_id, ts)"})
+print(out["draft"])
+if out["critique"]:
+    print("Not approved after", MAX_ITERATIONS, "rounds. Open issues:", out["critique"])
+`,
+  tsInstall: TS_BASE,
+  ts: String.raw`import { ChatAnthropic } from "@langchain/anthropic";
+import { StateGraph, Annotation, START, END } from "@langchain/langgraph";
+import { z } from "zod";
+
+const llm = new ChatAnthropic({ model: "claude-sonnet-5-5" });
+const MAX_ITERATIONS = 3;
+
+const State = Annotation.Root({
+  task: Annotation<string>,
+  draft: Annotation<string>,
+  critique: Annotation<string>,
+  iterations: Annotation<number>({ reducer: (_a, b) => b, default: () => 0 }),
+});
+
+const Review = z.object({ passed: z.boolean(), critique: z.string() });
+
+async function generate(state: typeof State.State) {
+  let prompt = "Task: " + state.task;
+  if (state.critique) {
+    prompt += "\n\nYour previous draft:\n" + state.draft + "\n\nFix these issues:\n" + state.critique;
+  }
+  const res = await llm.invoke(prompt);
+  return { draft: res.text, iterations: state.iterations + 1 };
+}
+
+async function reflect(state: typeof State.State) {
+  // Reflexion-style: add real evidence here (test output, linter, search results)
+  const review = await llm.withStructuredOutput(Review).invoke(
+    "Strictly review this answer to the task '" + state.task + "'. " +
+      "Pass it only if it is correct and complete.\n\n" + state.draft
+  );
+  return { critique: review.passed ? "" : review.critique };
+}
+
+const shouldContinue = (state: typeof State.State) =>
+  !state.critique || state.iterations >= MAX_ITERATIONS ? END : "generate";
+
+const graph = new StateGraph(State)
+  .addNode("generate", generate)
+  .addNode("reflect", reflect)
+  .addEdge(START, "generate")
+  .addEdge("generate", "reflect")
+  .addConditionalEdges("reflect", shouldContinue, ["generate", END])
+  .compile();
+
+const out = await graph.invoke({ task: "Write a SQL query for monthly active users from events(user_id, ts)" });
+console.log(out.draft);
+if (out.critique) console.log("Not approved after " + MAX_ITERATIONS + " rounds. Open issues: " + out.critique);
+`,
+  examples: [
+    { company: "Uber", domain: "uber.com", title: "AutoCover: LLM critic + mutation testing on generated tests", url: "https://www.zenml.io/llmops-database/ai-powered-developer-tools-for-code-quality-and-test-generation" },
+    { company: "GPT Researcher", domain: "github.com", title: "Reviewer and reviser agents in the research loop", url: "https://github.com/assafelovic/gpt-researcher/blob/master/docs/blog/2024-05-19-gptr-langgraph/index.md" },
+  ],
+},
+
+/* ------------------------------------------------------------------ 9 */
+{
+  id: "agentic-rag",
+  traits: ["docs", "checks", "flow"],
+  marks: [["grade", "Documents are graded before they are used"], ["chk", "The answer is checked against its sources"]],
+  similar: [["router", "the routing step on its own."], ["reflection", "the grading and grounding checks are reflection loops."]],
+  desc: "START goes to Route question. In-domain questions go to Retrieve, then Grade documents: relevant documents go to Generate, irrelevant ones go to Rewrite query and back to Retrieve. Other questions go to Web search, then Generate. Generate goes to a grounding check that retries Generate or goes to END.",
+  name: "Agentic RAG (Corrective / Adaptive / Self-RAG)",
+  adoption: "Common",
+  tagline: "Retrieval becomes a decision loop: choose a source, grade the documents, rewrite the query or fall back to the web, then check the answer is supported.",
+  diagram: {
+    w: 450, h: 340,
+    nodes: [
+      { id: "s", x: 75, y: 40, label: "START", kind: "io", w: 70 },
+      { id: "route", x: 220, y: 40, label: "Route question", kind: "llm", w: 120 },
+      { id: "web", x: 370, y: 40, label: "Web search", kind: "tool", w: 110 },
+      { id: "ret", x: 220, y: 130, label: "Retrieve\n(vector DB)", kind: "tool", w: 120 },
+      { id: "rw", x: 62, y: 220, label: "Rewrite\nquery", kind: "llm", w: 84 },
+      { id: "grade", x: 220, y: 220, label: "Grade\ndocuments", kind: "llm", w: 120 },
+      { id: "gen", x: 370, y: 130, label: "Generate", kind: "llm", w: 110 },
+      { id: "chk", x: 370, y: 220, label: "Grounded?\n(hallucination)", kind: "llm", w: 110 },
+      { id: "e", x: 370, y: 305, label: "END", kind: "io", w: 70 },
+    ],
+    edges: [
+      ["s", "route"],
+      ["route", "ret", { label: "in-domain", dashed: true }],
+      ["route", "web", { label: "web", dashed: true }],
+      ["ret", "grade"],
+      ["grade", "gen", { label: "relevant", dashed: true }],
+      ["grade", "rw", { label: "irrelevant", dashed: true }],
+      ["rw", "ret", { bend: 30 }],
+      ["web", "gen"],
+      ["gen", "chk", { bend: 18 }],
+      ["chk", "gen", { label: "retry", dashed: true, bend: 18 }],
+      ["chk", "e", { label: "yes", dashed: true }],
+    ],
+  },
+  summary: `
+    <p>Basic RAG retrieves once and hopes the results are good. Agentic RAG adds LLM decision points around retrieval, which makes it one of the most widely deployed patterns, even though it's usually hidden inside a bigger assistant.</p>
+    <h3>The three classic variants (combine freely)</h3>
+    <ul><li><strong>Adaptive RAG</strong>: route each question to the vector store, web search or no retrieval.</li><li><strong>Corrective RAG (CRAG)</strong>: grade the retrieved documents; if they're poor, rewrite the query or fall back to the web.</li><li><strong>Self-RAG</strong>: after generating, check the answer is supported by the documents and actually answers the question, and retry if not.</li></ul>
+    <h3>Use when</h3>
+    <ul><li>Q&amp;A over a knowledge base where wrong answers are costly (support, legal, healthcare, internal docs).</li></ul>
+    <h3>Watch out for</h3>
+    <ul><li>Every grading call adds latency. Grade in batches, or use a small, fast model for grading.</li><li>Retry loops need a cap.</li></ul>
+    <h3>Key LangGraph pieces</h3>
+    <div class="chips"><code>conditional entry point</code><code>retriever.invoke</code><code>with_structured_output</code></div>`,
+  pyInstall: PY_BASE + " numpy",
+  py: String.raw`from typing import Literal, TypedDict
+
+from pydantic import BaseModel
+from langchain.chat_models import init_chat_model
+from langchain_core.embeddings import DeterministicFakeEmbedding  # swap for a real embedding model
+from langchain_core.vectorstores import InMemoryVectorStore       # or pgvector, Pinecone, Elastic...
+from langgraph.graph import StateGraph, START, END
+
+llm = init_chat_model("anthropic:claude-sonnet-5-5")
+store = InMemoryVectorStore.from_texts(["...your product docs..."], DeterministicFakeEmbedding(size=256))
+retriever = store.as_retriever(search_kwargs={"k": 4})
+MAX_REWRITES = 2      # query rewrites before falling back to web search
+MAX_GENERATIONS = 2   # answers to try before returning the best effort
+
+
+def web_search(query: str) -> str:
+    return f"(web results for {query})"  # e.g. Tavily or Exa
+
+
+class State(TypedDict, total=False):
+    question: str        # the user's question, never changed
+    search_query: str    # what we search with; rewritten when retrieval misses
+    documents: list[str]
+    answer: str
+    rewrites: int
+    generations: int
+
+
+class Source(BaseModel):
+    source: Literal["vectorstore", "web"]
+
+
+class Grade(BaseModel):
+    relevant: bool
+
+
+class Grounded(BaseModel):
+    grounded: bool
+
+
+def route_question(state: State) -> str:  # Adaptive RAG
+    r = llm.with_structured_output(Source).invoke(
+        "Answer 'vectorstore' if this is about our product, otherwise 'web'.\n"
+        f"Question: {state['question']}"
+    )
+    return r.source
+
+
+def query(state: State) -> str:
+    return state.get("search_query") or state["question"]
+
+
+def retrieve(state: State):
+    return {"documents": [d.page_content for d in retriever.invoke(query(state))]}
+
+
+def grade_documents(state: State):  # Corrective RAG
+    grades = llm.with_structured_output(Grade).batch(
+        [f"Is this document relevant to '{state['question']}'?\n\n{d}" for d in state["documents"]]
+    )
+    return {"documents": [d for d, g in zip(state["documents"], grades) if g.relevant]}
+
+
+def after_grading(state: State) -> str:
+    if state["documents"]:
+        return "generate"
+    return "rewrite" if state.get("rewrites", 0) < MAX_REWRITES else "web"
+
+
+def rewrite(state: State):
+    better = llm.invoke(f"Rewrite this search query to be more specific: {query(state)}").text
+    return {"search_query": better, "rewrites": state.get("rewrites", 0) + 1}
+
+
+def web(state: State):
+    return {"documents": [web_search(query(state))]}
+
+
+def generate(state: State):
+    context = "\n\n".join(state["documents"])
+    prompt = f"Answer using only this context.\n\nContext:\n{context}\n\nQuestion: {state['question']}"
+    return {"answer": llm.invoke(prompt).text, "generations": state.get("generations", 0) + 1}
+
+
+def check_grounding(state: State) -> str:  # Self-RAG
+    if state["generations"] >= MAX_GENERATIONS:
+        return END  # stop retrying; return the latest answer
+    g = llm.with_structured_output(Grounded).invoke(
+        f"Is every claim in this answer supported by the context?\n"
+        f"Context: {state['documents']}\nAnswer: {state['answer']}"
+    )
+    return END if g.grounded else "generate"
+
+
+builder = StateGraph(State)
+for name, fn in [("retrieve", retrieve), ("grade", grade_documents), ("rewrite", rewrite),
+                 ("web", web), ("generate", generate)]:
+    builder.add_node(name, fn)
+builder.add_conditional_edges(START, route_question, {"vectorstore": "retrieve", "web": "web"})
+builder.add_edge("retrieve", "grade")
+builder.add_conditional_edges("grade", after_grading, ["generate", "rewrite", "web"])
+builder.add_edge("rewrite", "retrieve")
+builder.add_edge("web", "generate")
+builder.add_conditional_edges("generate", check_grounding, ["generate", END])
+graph = builder.compile()
+
+print(graph.invoke({"question": "How do I rotate my API key?"})["answer"])
+`,
+  tsInstall: TS_BASE,
+  ts: String.raw`import { ChatAnthropic } from "@langchain/anthropic";
+import { StateGraph, Annotation, START, END } from "@langchain/langgraph";
+import { z } from "zod";
+
+const llm = new ChatAnthropic({ model: "claude-sonnet-5-5" });
+
+// Plug in any LangChain retriever (pgvector, Pinecone, Elastic, MemoryVectorStore...)
+declare const retriever: { invoke(query: string): Promise<{ pageContent: string }[]> };
+const webSearch = async (q: string) => "(web results for " + q + ")"; // e.g. Tavily or Exa
+const MAX_REWRITES = 2; // query rewrites before falling back to web search
+const MAX_GENERATIONS = 2; // answers to try before returning the best effort
+
+const State = Annotation.Root({
+  question: Annotation<string>, // the user's question, never changed
+  searchQuery: Annotation<string>, // what we search with; rewritten when retrieval misses
+  documents: Annotation<string[]>,
+  answer: Annotation<string>,
+  rewrites: Annotation<number>({ reducer: (_a, b) => b, default: () => 0 }),
+  generations: Annotation<number>({ reducer: (_a, b) => b, default: () => 0 }),
+});
+type S = typeof State.State;
+
+const Source = z.object({ source: z.enum(["vectorstore", "web"]) });
+const Grade = z.object({ relevant: z.boolean() });
+const Grounded = z.object({ grounded: z.boolean() });
+
+async function routeQuestion(state: S) { // Adaptive RAG
+  const r = await llm.withStructuredOutput(Source).invoke(
+    "Answer 'vectorstore' if this is about our product, otherwise 'web'.\nQuestion: " + state.question
+  );
+  return r.source;
+}
+
+const query = (state: S) => state.searchQuery || state.question;
+
+async function retrieve(state: S) {
+  const docs = await retriever.invoke(query(state));
+  return { documents: docs.map((d) => d.pageContent) };
+}
+
+async function gradeDocuments(state: S) { // Corrective RAG
+  const grader = llm.withStructuredOutput(Grade);
+  const verdicts = await Promise.all(
+    state.documents.map((d) => grader.invoke("Is this document relevant to '" + state.question + "'?\n\n" + d))
+  );
+  return { documents: state.documents.filter((_, i) => verdicts[i].relevant) };
+}
+
+const afterGrading = (state: S) =>
+  state.documents.length ? "generate" : state.rewrites < MAX_REWRITES ? "rewrite" : "web";
+
+async function rewrite(state: S) {
+  const res = await llm.invoke("Rewrite this search query to be more specific: " + query(state));
+  return { searchQuery: res.text, rewrites: state.rewrites + 1 };
+}
+
+async function web(state: S) {
+  return { documents: [await webSearch(query(state))] };
+}
+
+async function generate(state: S) {
+  const res = await llm.invoke(
+    "Answer using only this context.\n\nContext:\n" + state.documents.join("\n\n") +
+      "\n\nQuestion: " + state.question
+  );
+  return { answer: res.text, generations: state.generations + 1 };
+}
+
+async function checkGrounding(state: S) { // Self-RAG
+  if (state.generations >= MAX_GENERATIONS) return END; // stop retrying; return the latest answer
+  const g = await llm.withStructuredOutput(Grounded).invoke(
+    "Is every claim in this answer supported by the context?\nContext: " +
+      JSON.stringify(state.documents) + "\nAnswer: " + state.answer
+  );
+  return g.grounded ? END : "generate";
+}
+
+const graph = new StateGraph(State)
+  .addNode("retrieve", retrieve)
+  .addNode("grade", gradeDocuments)
+  .addNode("rewrite", rewrite)
+  .addNode("web", web)
+  .addNode("generate", generate)
+  .addConditionalEdges(START, routeQuestion, { vectorstore: "retrieve", web: "web" })
+  .addEdge("retrieve", "grade")
+  .addConditionalEdges("grade", afterGrading, ["generate", "rewrite", "web"])
+  .addEdge("rewrite", "retrieve")
+  .addEdge("web", "generate")
+  .addConditionalEdges("generate", checkGrounding, ["generate", END])
+  .compile();
+
+const out = await graph.invoke({ question: "How do I rotate my API key?" });
+console.log(out.answer);
+`,
+  examples: [
+    { company: "Komodo Health", domain: "komodohealth.com", title: "Healthcare-data assistant", url: "https://www.komodohealth.com/perspectives/new-gen-ai-assistant-empowers-the-enterprise/" },
+    { company: "Elastic", domain: "elastic.co", title: "Elastic AI Assistant for security", url: "https://blog.langchain.com/langchain-partners-with-elastic-to-launch-the-elastic-ai-assistant/" },
+    { company: "LangChain", ref: true, domain: "langchain.com", title: "Reference: Agentic RAG with LangGraph", url: "https://www.langchain.com/blog/agentic-rag-with-langgraph" },
+  ],
+  exNote: "Agentic RAG is widely deployed but usually sits inside a larger assistant, so few case studies name it as their architecture.",
+},
+
+/* ------------------------------------------------------------------ 10 */
+{
+  id: "llmcompiler",
+  traits: ["parallel", "plans"],
+  marks: [["p", "The plan is a dependency graph"], ["t2", "Independent calls run at the same time"]],
+  similar: [["plan-execute", "runs the steps one at a time."], ["orchestrator", "also parallel, but its workers are independent agents, not tool calls."]],
+  desc: "START goes to the Planner, which builds a task graph and streams tasks to the Task fetching unit. It runs ready tasks in parallel: two searches, then a calculation that depends on the first. All results go to the Joiner, which answers and goes to END, or sends the work back to the Planner to replan.",
+  name: "LLMCompiler (Parallel Task DAG)",
+  adoption: "Specialized",
+  tagline: "The planner outputs a graph of dependent tool calls. Independent calls run in parallel, and a joiner either answers or asks for a new plan.",
+  diagram: {
+    w: 440, h: 345,
+    nodes: [
+      { id: "s", x: 240, y: 22, label: "START", kind: "io", w: 70, h: 28 },
+      { id: "p", x: 240, y: 80, label: "Planner\n(builds task DAG)", kind: "llm", w: 150 },
+      { id: "f", x: 240, y: 160, label: "Task fetching unit\n(runs ready tasks)", kind: "tool", w: 170 },
+      { id: "t1", x: 115, y: 240, label: "search($q)", kind: "tool", w: 100, h: 38 },
+      { id: "t2", x: 240, y: 240, label: "search($q2)", kind: "tool", w: 100, h: 38 },
+      { id: "t3", x: 365, y: 240, label: "calc($1,$2)", kind: "tool", w: 100, h: 38 },
+      { id: "j", x: 240, y: 315, label: "Joiner", kind: "llm", w: 120 },
+      { id: "e", x: 385, y: 315, label: "END", kind: "io", w: 64 },
+    ],
+    edges: [
+      ["s", "p"],
+      ["p", "f", { label: "stream tasks" }],
+      ["f", "t1", { dashed: true }], ["f", "t2", { label: "parallel", dashed: true }], ["f", "t3", { dashed: true }],
+      ["t1", "t3", { label: "deps: $1", bend: 34, dashed: true }],
+      ["t1", "j"], ["t2", "j"], ["t3", "j"],
+      ["j", "e", { label: "answer", dashed: true }],
+      ["j", "p", { label: "replan", dashed: true, via: [[30, 315], [30, 80]] }],
+    ],
+  },
+  summary: `
+    <p>An evolution of plan-and-execute. The planner outputs tasks with dependencies, for example <code>3. calc($1, $2)</code> needs tasks 1 and 2. A scheduler runs every task whose dependencies are met at the same time, so independent lookups never wait on each other. A joiner LLM then either answers or sends feedback to the planner for a new plan.</p>
+    <h3>Use when</h3>
+    <ul><li>Questions need several independent API or tool calls whose results combine (account lookups, comparisons, multi-hop questions).</li><li>Latency matters: fewer LLM round trips than ReAct, and calls run in parallel.</li></ul>
+    <h3>Watch out for</h3>
+    <ul><li>It's harder to build and debug. Planners can produce broken dependency graphs, so validate the plan.</li><li>It's overkill for simple single-tool questions.</li></ul>
+    <h3>Key LangGraph pieces</h3>
+    <div class="chips"><code>async nodes</code><code>asyncio.gather</code><code>with_structured_output</code><code>loop edges</code></div>`,
+  pyInstall: PY_BASE,
+  py: String.raw`import asyncio
+import re
+from typing import Literal, TypedDict
+
+from pydantic import BaseModel, Field
+from langchain.chat_models import init_chat_model
+from langgraph.graph import StateGraph, START, END
+
+llm = init_chat_model("anthropic:claude-sonnet-5-5")
+MAX_PLANS = 3  # plans to try before giving up
+
+
+async def search_tool(query: str) -> str:
+    return f"(search results for {query})"
+
+
+async def calc_tool(expression: str) -> str:
+    return f"(result of {expression})"
+
+
+TOOLS = {"search": search_tool, "calculator": calc_tool}
+
+
+class Task(BaseModel):
+    id: int
+    tool: Literal["search", "calculator"]
+    args: str = Field(description="May reference earlier results as $1, $2, ...")
+    deps: list[int] = []
+
+
+class TaskPlan(BaseModel):
+    tasks: list[Task]
+
+
+class JoinDecision(BaseModel):
+    final_answer: str = ""
+    replan_reason: str = ""
+
+
+class State(TypedDict, total=False):
+    question: str
+    tasks: list[Task]
+    results: dict[int, str]
+    answer: str
+    feedback: str
+    plans: int
+
+
+def ready_tasks(state: State) -> list[Task]:
+    done = state["results"]
+    return [t for t in state["tasks"] if t.id not in done and all(d in done for d in t.deps)]
+
+
+def planner(state: State):
+    plan = llm.with_structured_output(TaskPlan).invoke(
+        "Break the question into tool calls. Give each an id and list the ids it depends on. "
+        "Reference earlier results as $<id>.\nTools: search, calculator\n"
+        f"Question: {state['question']}\n{state.get('feedback', '')}"
+    )
+    return {"tasks": plan.tasks, "results": {}, "plans": state.get("plans", 0) + 1}
+
+
+async def execute(state: State):
+    """Task fetching unit: run every task whose dependencies are met, in parallel."""
+    done = state["results"]
+
+    async def run(task: Task):
+        # Swap $<id> for that task's result; \b keeps $1 from matching inside $10
+        args = re.sub(r"\$(\d+)\b", lambda m: done.get(int(m.group(1)), m.group(0)), task.args)
+        return task.id, await TOOLS[task.tool](args)
+
+    finished = await asyncio.gather(*(run(t) for t in ready_tasks(state)))
+    return {"results": {**done, **dict(finished)}}
+
+
+def joiner(state: State):
+    d = llm.with_structured_output(JoinDecision).invoke(
+        f"Question: {state['question']}\nTool results: {state['results']}\n"
+        "Give final_answer if you can answer; otherwise explain what is missing in replan_reason."
+    )
+    if d.final_answer:
+        return {"answer": d.final_answer}
+    if state["plans"] >= MAX_PLANS:
+        return {"answer": "Couldn't answer after " + str(MAX_PLANS) + " plans: " + d.replan_reason}
+    return {"feedback": "The previous plan failed: " + d.replan_reason}
+
+
+def more_work(state: State) -> str:
+    return "execute" if ready_tasks(state) else "joiner"
+
+
+builder = StateGraph(State)
+builder.add_node("planner", planner)
+builder.add_node("execute", execute)
+builder.add_node("joiner", joiner)
+builder.add_edge(START, "planner")
+builder.add_conditional_edges("planner", more_work, ["execute", "joiner"])
+builder.add_conditional_edges("execute", more_work, ["execute", "joiner"])
+builder.add_conditional_edges("joiner", lambda s: END if s.get("answer") else "planner", ["planner", END])
+graph = builder.compile()
+
+out = asyncio.run(graph.ainvoke(
+    {"question": "What's the combined population of Dubai and Abu Dhabi?"},
+    {"recursion_limit": 100},  # backstop only: each dependency level is one step, across up to MAX_PLANS plans
+))
+print(out["answer"])
+`,
+  tsInstall: TS_BASE,
+  ts: String.raw`import { ChatAnthropic } from "@langchain/anthropic";
+import { StateGraph, Annotation, START, END } from "@langchain/langgraph";
+import { z } from "zod";
+
+const llm = new ChatAnthropic({ model: "claude-sonnet-5-5" });
+const MAX_PLANS = 3; // plans to try before giving up
+
+const TOOLS: Record<"search" | "calculator", (arg: string) => Promise<string>> = {
+  search: async (q) => "(search results for " + q + ")",
+  calculator: async (expr) => "(result of " + expr + ")",
+};
+
+const Task = z.object({
+  id: z.number(),
+  tool: z.enum(["search", "calculator"]),
+  args: z.string().describe("May reference earlier results as $1, $2, ..."),
+  deps: z.array(z.number()),
+});
+type TaskT = z.infer<typeof Task>;
+const TaskPlan = z.object({ tasks: z.array(Task) });
+const JoinDecision = z.object({
+  finalAnswer: z.string().optional(),
+  replanReason: z.string().optional(),
+});
+
+const State = Annotation.Root({
+  question: Annotation<string>,
+  tasks: Annotation<TaskT[]>,
+  results: Annotation<Record<number, string>>,
+  answer: Annotation<string>,
+  feedback: Annotation<string>,
+  plans: Annotation<number>({ reducer: (_a, b) => b, default: () => 0 }),
+});
+type S = typeof State.State;
+
+const readyTasks = (s: S) =>
+  s.tasks.filter((t) => !(t.id in s.results) && t.deps.every((d) => d in s.results));
+
+async function planner(state: S) {
+  const plan = await llm.withStructuredOutput(TaskPlan).invoke(
+    "Break the question into tool calls. Give each an id and list the ids it depends on. " +
+      "Reference earlier results as $<id>.\nTools: search, calculator\n" +
+      "Question: " + state.question + "\n" + (state.feedback ?? "")
+  );
+  return { tasks: plan.tasks, results: {}, plans: state.plans + 1 };
+}
+
+// Task fetching unit: run every task whose dependencies are met, in parallel
+async function execute(state: S) {
+  const finished = await Promise.all(
+    readyTasks(state).map(async (t) => {
+      // Swap $<id> for that task's result; \b keeps $1 from matching inside $10
+      const args = t.args.replace(/\$(\d+)\b/g, (m, id) => state.results[Number(id)] ?? m);
+      return [t.id, await TOOLS[t.tool](args)] as const;
+    })
+  );
+  return { results: { ...state.results, ...Object.fromEntries(finished) } };
+}
+
+async function joiner(state: S) {
+  const d = await llm.withStructuredOutput(JoinDecision).invoke(
+    "Question: " + state.question + "\nTool results: " + JSON.stringify(state.results) +
+      "\nGive finalAnswer if you can answer; otherwise explain what is missing in replanReason."
+  );
+  if (d.finalAnswer) return { answer: d.finalAnswer };
+  if (state.plans >= MAX_PLANS) {
+    return { answer: "Couldn't answer after " + MAX_PLANS + " plans: " + (d.replanReason ?? "") };
+  }
+  return { feedback: "The previous plan failed: " + (d.replanReason ?? "") };
+}
+
+const moreWork = (s: S) => (readyTasks(s).length ? "execute" : "joiner");
+
+const graph = new StateGraph(State)
+  .addNode("planner", planner)
+  .addNode("execute", execute)
+  .addNode("joiner", joiner)
+  .addEdge(START, "planner")
+  .addConditionalEdges("planner", moreWork, ["execute", "joiner"])
+  .addConditionalEdges("execute", moreWork, ["execute", "joiner"])
+  .addConditionalEdges("joiner", (s) => (s.answer ? END : "planner"), ["planner", END])
+  .compile();
+
+const out = await graph.invoke(
+  { question: "What's the combined population of Dubai and Abu Dhabi?" },
+  { recursionLimit: 100 } // backstop only: each dependency level is one step, across up to MAX_PLANS plans
+);
+console.log(out.answer);
+`,
+  examples: [
+    { company: "Fastweb + Vodafone", domain: "vodafone.com", title: "Use-case agents follow the LLM Compiler pattern", url: "https://blog.langchain.com/customers-vodafone-italy" },
+    { company: "LangChain", ref: true, domain: "langchain.com", title: "Reference: Planning agents (LLMCompiler)", url: "https://www.langchain.com/blog/planning-agents" },
+  ],
+},
+
+/* ------------------------------------------------------------------ 11 */
+{
+  id: "deep-agents",
+  traits: ["background", "plans", "specialists"],
+  marks: [["todo", "Writes and updates its own todo list"], ["a", "Sub-agents return summaries, not transcripts"]],
+  similar: [["supervisor", "also delegates to sub-agents, but without a shared todo plan or files."], ["plan-execute", "plans up front but keeps everything in one context."]],
+  desc: "START goes to the Main agent, which reads and writes a todo plan and a virtual filesystem. It delegates to sub-agents with the task() tool; each works in a clean context and returns only a summary. The Main agent goes to END when finished.",
+  name: "Deep Agents",
+  adoption: "Emerging",
+  tagline: "A planning tool, sub-agents with their own context, a virtual filesystem and a detailed prompt: the design behind Claude Code, Manus and Deep Research.",
+  diagram: {
+    w: 440, h: 290,
+    nodes: [
+      { id: "s", x: 70, y: 35, label: "START", kind: "io", w: 70 },
+      { id: "m", x: 220, y: 120, label: "Main agent\n(detailed prompt)", kind: "llm", w: 140 },
+      { id: "e", x: 370, y: 35, label: "END", kind: "io", w: 70 },
+      { id: "todo", x: 70, y: 120, label: "write_todos\n(plan)", kind: "data", w: 100 },
+      { id: "fs", x: 370, y: 120, label: "Virtual\nfilesystem", kind: "data", w: 100 },
+      { id: "a", x: 130, y: 245, label: "Sub-agent\n(clean context)", kind: "llm", w: 120 },
+      { id: "b", x: 310, y: 245, label: "Sub-agent\n(clean context)", kind: "llm", w: 120 },
+    ],
+    edges: [
+      ["s", "m"],
+      ["m", "e", { dashed: true }],
+      ["m", "todo", { both: true, dashed: true }],
+      ["m", "fs", { both: true, dashed: true }],
+      ["m", "a", { bend: 14 }], ["a", "m", { label: "summary", bend: 14, dashed: true }],
+      ["m", "b", { label: "task()", bend: 14 }], ["b", "m", { bend: 14, dashed: true }],
+    ],
+  },
+  summary: `
+    <p>A plain ReAct agent fails on long tasks because its context fills up and it loses the plan. Deep agents add four things on top of the tool loop: a <strong>todo/planning tool</strong>, <strong>sub-agents</strong> started with a fresh context that return only a summary, a <strong>virtual filesystem</strong> for notes and artifacts, and a <strong>long, detailed system prompt</strong>. LangChain ships this as the <code>deepagents</code> package, built on LangGraph.</p>
+    <h3>Use when</h3>
+    <ul><li>Long-running work: deep research, coding agents, analysis that spans dozens of tool calls.</li><li>Sub-tasks would flood the main context (big search results, long files).</li></ul>
+    <h3>Watch out for</h3>
+    <ul><li>It's token-heavy. Sub-agents multiply cost.</li><li>It's a new library and its API is still changing, so pin your versions.</li></ul>
+    <h3>Key pieces</h3>
+    <div class="chips"><code>create_deep_agent</code><code>write_todos</code><code>task (sub-agents)</code><code>ls / read_file / write_file</code></div>`,
+  pyInstall: "pip install -U deepagents langchain-anthropic",
+  py: String.raw`from deepagents import create_deep_agent
+
+
+def internet_search(query: str, max_results: int = 5) -> str:
+    """Search the web and return the top results."""
+    return f"(top {max_results} results for {query})"  # e.g. Tavily or Exa
+
+
+research_subagent = {
+    "name": "researcher",
+    "description": "Researches ONE focused sub-question in depth. Give it a single question.",
+    "system_prompt": "You are a meticulous researcher. Return a concise answer with sources.",
+    "tools": [internet_search],
+}
+
+agent = create_deep_agent(
+    model="anthropic:claude-sonnet-5-5",
+    tools=[internet_search],
+    system_prompt=(
+        "You are an expert analyst. First plan with write_todos. Delegate each research "
+        "question to the researcher sub-agent. Keep notes in files. Finally write the "
+        "full report to report.md and reply with a short summary."
+    ),
+    subagents=[research_subagent],
+)
+# Built-in tools: write_todos (planning), ls / read_file / write_file / edit_file
+# (virtual filesystem in graph state), task (spawn a sub-agent with a clean context)
+
+result = agent.invoke(
+    {"messages": [{"role": "user", "content": "Compare LangGraph, CrewAI and AutoGen for enterprise use"}]}
+)
+print(result["messages"][-1].text)
+`,
+  tsInstall: "npm i deepagents @langchain/anthropic @langchain/core zod",
+  ts: String.raw`import { ChatAnthropic } from "@langchain/anthropic";
+import { tool } from "@langchain/core/tools";
+import { createDeepAgent } from "deepagents";
+import { z } from "zod";
+
+const internetSearch = tool(
+  async ({ query, maxResults }) => "(top " + maxResults + " results for " + query + ")", // e.g. Tavily or Exa
+  {
+    name: "internet_search",
+    description: "Search the web and return the top results.",
+    schema: z.object({ query: z.string(), maxResults: z.number().default(5) }),
+  }
+);
+
+const agent = createDeepAgent({
+  model: new ChatAnthropic({ model: "claude-sonnet-5-5" }),
+  tools: [internetSearch],
+  systemPrompt:
+    "You are an expert analyst. First plan with write_todos. Delegate each research " +
+    "question to the researcher sub-agent. Keep notes in files. Finally write the " +
+    "full report to report.md and reply with a short summary.",
+  subagents: [
+    {
+      name: "researcher",
+      description: "Researches ONE focused sub-question in depth. Give it a single question.",
+      systemPrompt: "You are a meticulous researcher. Return a concise answer with sources.",
+      tools: [internetSearch],
+    },
+  ],
+});
+// Built-in tools: write_todos (planning), ls / read_file / write_file / edit_file
+// (virtual filesystem in graph state), task (spawn a sub-agent with a clean context)
+
+const result = await agent.invoke({
+  messages: [{ role: "user", content: "Compare LangGraph, CrewAI and AutoGen for enterprise use" }],
+});
+console.log(result.messages.at(-1)?.text);
+`,
+  examplesTitle: "Reference implementations",
+  examples: [
+    { company: "LangChain", ref: true, domain: "langchain.com", title: "Deep Agents documentation", url: "https://docs.langchain.com/labs/deep-agents/overview" },
+  ],
+  exNote: "No named enterprise case study yet. The pattern itself copies Claude Code, Manus and OpenAI Deep Research.",
+},
+
+/* ------------------------------------------------------------------ 12 */
+{
+  id: "swarm",
+  traits: ["specialists"],
+  marks: [["a", "Agents hand the conversation to each other"], ["st", "Remembers who the user was talking to"]],
+  similar: [["network", "the same hub-less handoffs, built by hand."], ["supervisor", "routes every turn through a central agent."]],
+  desc: "Each user turn looks up the active agent saved in the checkpoint and routes to it. The Flight, Hotel and Support agents hand the conversation directly to each other with handoff tools.",
+  name: "Swarm (Handoff Multi-Agent)",
+  adoption: "Emerging",
+  tagline: "Agents hand the conversation to each other with handoff tools, with no supervisor. The swarm remembers which agent is active between turns.",
+  diagram: {
+    w: 440, h: 300,
+    nodes: [
+      { id: "u", x: 70, y: 40, label: "User turn", kind: "io", w: 90 },
+      { id: "st", x: 280, y: 40, label: "active_agent\n(checkpointed)", kind: "data", w: 120 },
+      { id: "a", x: 95, y: 160, label: "Flight\nagent", kind: "llm", w: 110 },
+      { id: "b", x: 345, y: 160, label: "Hotel\nagent", kind: "llm", w: 110 },
+      { id: "c", x: 220, y: 265, label: "Support\nagent", kind: "llm", w: 110 },
+    ],
+    edges: [
+      ["u", "st", { label: "lookup", dashed: true }],
+      ["st", "a", { label: "routes to active", dashed: true }],
+      ["a", "b", { label: "handoff", bend: 16 }], ["b", "a", { bend: 16 }],
+      ["b", "c", { bend: 16 }], ["c", "b", { label: "handoff", bend: 16 }],
+      ["c", "a", { bend: 16 }], ["a", "c", { label: "handoff", bend: 16 }],
+    ],
+  },
+  summary: `
+    <p>Each agent is a ReAct agent that has <em>handoff tools</em> like <code>transfer_to_hotel_agent</code>. Calling one moves control, together with the conversation, to that agent. The swarm saves the active agent, so the user's next message goes straight to whoever they were talking to.</p>
+    <h3>Use when</h3>
+    <ul><li>Conversational products where the topic shifts (travel, banking, telecom support).</li><li>You want to avoid a supervisor hop on every turn, which means lower latency.</li></ul>
+    <h3>Watch out for</h3>
+    <ul><li>There's no global controller, so it's harder to enforce policy. Add guardrails inside each agent.</li><li>Handoff loops. Write clear handoff descriptions.</li><li>Little public production evidence so far; supervisor is the safer enterprise default.</li></ul>
+    <h3>Key LangGraph pieces</h3>
+    <div class="chips"><code>langgraph-swarm</code><code>create_handoff_tool</code><code>Command(graph=Command.PARENT)</code><code>checkpointer</code></div>`,
+  pyInstall: PY_BASE + " langgraph-swarm",
+  py: String.raw`from langchain.agents import create_agent
+from langchain.chat_models import init_chat_model
+from langchain_core.tools import tool
+from langgraph.checkpoint.memory import InMemorySaver
+from langgraph_swarm import create_handoff_tool, create_swarm
+
+llm = init_chat_model("anthropic:claude-sonnet-5-5")
+
+
+@tool
+def search_flights(origin: str, destination: str, date: str) -> str:
+    """Find flights."""
+    return f"EK073 {origin}->{destination} on {date}, 14:35"
+
+
+@tool
+def search_hotels(city: str, nights: int) -> str:
+    """Find hotels."""
+    return f"Hotel Lumière, {city}, {nights} nights"
+
+
+# Each agent needs a name: handoff tools and the swarm route by it
+flight_agent = create_agent(
+    llm,
+    tools=[
+        search_flights,
+        create_handoff_tool(agent_name="hotel_agent", description="Transfer to the hotel agent for hotel questions."),
+    ],
+    system_prompt="You are a flight-booking specialist.",
+    name="flight_agent",
+)
+
+hotel_agent = create_agent(
+    llm,
+    tools=[
+        search_hotels,
+        create_handoff_tool(agent_name="flight_agent", description="Transfer to the flight agent for flight questions."),
+    ],
+    system_prompt="You are a hotel-booking specialist.",
+    name="hotel_agent",
+)
+
+graph = create_swarm(
+    [flight_agent, hotel_agent], default_active_agent="flight_agent"
+).compile(checkpointer=InMemorySaver())  # remembers the active agent between turns
+
+config = {"configurable": {"thread_id": "trip-1"}}
+graph.invoke({"messages": [{"role": "user", "content": "Flight Dubai to Paris on 12 Nov"}]}, config)
+result = graph.invoke({"messages": [{"role": "user", "content": "Now a hotel for 3 nights"}]}, config)
+print(result["active_agent"], "->", result["messages"][-1].text)  # hotel_agent -> ...
+`,
+  tsInstall: TS_BASE + " @langchain/langgraph-swarm",
+  ts: String.raw`import { ChatAnthropic } from "@langchain/anthropic";
+import { tool } from "@langchain/core/tools";
+import { MemorySaver } from "@langchain/langgraph";
+import { createReactAgent } from "@langchain/langgraph/prebuilt";
+import { createSwarm, createHandoffTool } from "@langchain/langgraph-swarm";
+import { z } from "zod";
+
+const llm = new ChatAnthropic({ model: "claude-sonnet-5-5" });
+
+const searchFlights = tool(
+  async ({ origin, destination, date }) => "EK073 " + origin + "->" + destination + " on " + date + ", 14:35",
+  {
+    name: "search_flights",
+    description: "Find flights.",
+    schema: z.object({ origin: z.string(), destination: z.string(), date: z.string() }),
+  }
+);
+
+const searchHotels = tool(
+  async ({ city, nights }) => "Hotel Lumière, " + city + ", " + nights + " nights",
+  {
+    name: "search_hotels",
+    description: "Find hotels.",
+    schema: z.object({ city: z.string(), nights: z.number() }),
+  }
+);
+
+// The JS swarm package still supports only LangGraph's prebuilt createReactAgent
+// (see its README); Python's langgraph-swarm works with create_agent.
+// Each agent needs a name: handoff tools and the swarm route by it.
+const flightAgent = createReactAgent({
+  llm,
+  tools: [
+    searchFlights,
+    createHandoffTool({ agentName: "hotel_agent", description: "Transfer to the hotel agent for hotel questions." }),
+  ],
+  prompt: "You are a flight-booking specialist.",
+  name: "flight_agent",
+});
+
+const hotelAgent = createReactAgent({
+  llm,
+  tools: [
+    searchHotels,
+    createHandoffTool({ agentName: "flight_agent", description: "Transfer to the flight agent for flight questions." }),
+  ],
+  prompt: "You are a hotel-booking specialist.",
+  name: "hotel_agent",
+});
+
+const graph = createSwarm({
+  agents: [flightAgent, hotelAgent],
+  defaultActiveAgent: "flight_agent",
+}).compile({ checkpointer: new MemorySaver() }); // remembers the active agent between turns
+
+const config = { configurable: { thread_id: "trip-1" } };
+await graph.invoke({ messages: [{ role: "user", content: "Flight Dubai to Paris on 12 Nov" }] }, config);
+const result = await graph.invoke({ messages: [{ role: "user", content: "Now a hotel for 3 nights" }] }, config);
+console.log(result.activeAgent, "->", result.messages.at(-1)?.text); // hotel_agent -> ...
+`,
+  examplesTitle: "Reference implementations",
+  examples: [
+    { company: "LangChain", ref: true, domain: "langchain.com", title: "langgraph-swarm library", url: "https://github.com/langchain-ai/langgraph-swarm-py" },
+    { company: "DEV Community", ref: true, domain: "dev.to", title: "Building multi-agent systems with LangGraph Swarm", url: "https://dev.to/sreeni5018/building-multi-agent-systems-with-langgraph-swarm-a-new-approach-to-agent-collaboration-15kj" },
+  ],
+  exNote: "I found no named company case study for swarm in production. Most enterprises choose a supervisor instead.",
+},
+
+/* ------------------------------------------------------------------ 13 */
+{
+  id: "ambient",
+  traits: ["background", "human"],
+  marks: [["ev", "Started by an event, not a chat message"], ["rv", "Pauses only for risky actions"]],
+  similar: [["hitl", "the interrupt() mechanism it relies on."], ["react", "the agent inside that does the acting."]],
+  desc: "An event such as an email, webhook or cron job goes to Triage, which chooses Notify user, Ignore, or Act. The acting ReAct agent reads preferences from long-term memory; a risky tool call pauses for human review, and approval runs send_email or book meeting.",
+  name: "Ambient / Event-Driven Agents",
+  adoption: "Emerging",
+  tagline: "Agents triggered by events (emails, webhooks, cron) instead of chat. They act in the background and pull in a human only when needed.",
+  diagram: {
+    w: 440, h: 300,
+    nodes: [
+      { id: "ev", x: 70, y: 55, label: "Event: email,\nwebhook, cron", kind: "io", w: 112, h: 46 },
+      { id: "tr", x: 220, y: 55, label: "Triage", kind: "llm", w: 110 },
+      { id: "n", x: 370, y: 55, label: "Notify user", kind: "human", w: 110 },
+      { id: "ig", x: 70, y: 150, label: "Ignore", kind: "io", w: 80 },
+      { id: "ag", x: 220, y: 150, label: "Act\n(ReAct agent)", kind: "llm", w: 120 },
+      { id: "mem", x: 370, y: 150, label: "Long-term\nmemory (Store)", kind: "data", w: 116 },
+      { id: "rv", x: 220, y: 255, label: "Review\n(interrupt)", kind: "human", w: 120 },
+      { id: "tool", x: 385, y: 255, label: "send_email /\nbook meeting", kind: "tool", w: 106 },
+    ],
+    edges: [
+      ["ev", "tr"],
+      ["tr", "n", { label: "notify", dashed: true }],
+      ["tr", "ig", { label: "ignore", dashed: true }],
+      ["tr", "ag", { label: "respond", dashed: true }],
+      ["ag", "mem", { both: true, dashed: true, label: "prefs" }],
+      ["ag", "rv", { label: "risky tool call" }],
+      ["rv", "tool", { label: "approve", dashed: true }],
+    ],
+  },
+  summary: `
+    <p>Most agents wait for a chat message. Ambient agents listen to a stream of events and run in the background. They use three human-in-the-loop modes: <strong>notify</strong> (flag something without acting), <strong>question</strong> (ask the user something) and <strong>review</strong> (approve before a risky action). Long-term memory stores the user's preferences, which are learned from their feedback.</p>
+    <h3>How it works</h3>
+    <ol><li>A webhook or cron job starts a new thread for each event.</li><li>Triage decides whether to ignore it, notify the user, or act on it.</li><li>The acting agent's risky tools call <code>interrupt()</code> and wait in an inbox UI (Agent Inbox).</li><li>The user's edits update preferences stored in the <code>Store</code>.</li></ol>
+    <h3>Use when</h3>
+    <ul><li>Email, ticket or alert triage, monitoring, and back-office automation.</li></ul>
+    <h3>Watch out for</h3>
+    <ul><li>Many open, paused threads. You need durable checkpointing and an inbox UI.</li><li>Errors compound quietly in the background. Monitor and evaluate continuously.</li></ul>
+    <h3>Key LangGraph pieces</h3>
+    <div class="chips"><code>interrupt()</code><code>BaseStore</code><code>cron / webhooks</code><code>Agent Inbox</code></div>`,
+  pyInstall: PY_BASE,
+  py: String.raw`from typing import Literal, TypedDict
+
+from pydantic import BaseModel
+from langchain.agents import create_agent
+from langchain.chat_models import init_chat_model
+from langchain_core.tools import tool
+from langgraph.checkpoint.memory import InMemorySaver
+from langgraph.graph import StateGraph, START, END
+from langgraph.store.base import BaseStore
+from langgraph.store.memory import InMemoryStore
+from langgraph.types import interrupt
+
+llm = init_chat_model("anthropic:claude-sonnet-5-5")
+
+
+@tool
+def send_email(to: str, subject: str, body: str) -> str:
+    """Send an email."""
+    # Review mode: pause for a human before the side effect
+    approval = interrupt({"action": "send_email", "to": to, "subject": subject, "body": body})
+    if approval.get("type") == "edit":
+        # The reviewer changed the email: send their version
+        edited = approval.get("args") or {}
+        to, subject, body = edited.get("to", to), edited.get("subject", subject), edited.get("body", body)
+    elif approval.get("type") != "accept":
+        return "The user rejected this email. Do not send it."
+    # gmail.send(to, subject, body)
+    return f"Sent to {to}: {subject}"
+
+
+@tool
+def check_calendar(day: str) -> str:
+    """List free slots on a given day."""
+    return "Free: 10:00-11:00, 15:00-16:00"
+
+
+responder = create_agent(llm, tools=[send_email, check_calendar], system_prompt="You are my email assistant.")
+
+
+class State(TypedDict, total=False):
+    email: dict
+    decision: str
+
+
+class Triage(BaseModel):
+    decision: Literal["ignore", "notify", "respond"]
+
+
+def triage(state: State, *, store: BaseStore):
+    prefs = store.get(("user", "prefs"), "triage")  # learned from past feedback
+    rules = prefs.value["rules"] if prefs else "Respond to customers. Ignore newsletters."
+    r = llm.with_structured_output(Triage).invoke(f"Triage rules: {rules}\n\nEmail: {state['email']}")
+    return {"decision": r.decision}
+
+
+def notify(state: State):
+    interrupt({"type": "notify", "email": state["email"]})  # shows up in the user's inbox UI
+    return {}
+
+
+def respond(state: State):
+    responder.invoke({"messages": [{"role": "user", "content": f"Handle this email: {state['email']}"}]})
+    return {}
+
+
+builder = StateGraph(State)
+builder.add_node("triage", triage)
+builder.add_node("notify", notify)
+builder.add_node("respond", respond)
+builder.add_edge(START, "triage")
+builder.add_conditional_edges("triage", lambda s: END if s["decision"] == "ignore" else s["decision"],
+                              ["notify", "respond", END])
+builder.add_edge("notify", END)
+builder.add_edge("respond", END)
+graph = builder.compile(checkpointer=InMemorySaver(), store=InMemoryStore())
+
+# Triggered by events, not chat, e.g. a Gmail push webhook or a cron job:
+email = {"id": "msg-123", "from": "client@acme.com", "subject": "Meeting next week?", "body": "..."}
+graph.invoke({"email": email}, {"configurable": {"thread_id": email["id"]}})
+`,
+  tsInstall: TS_BASE + " langchain",
+  ts: String.raw`import { ChatAnthropic } from "@langchain/anthropic";
+import { tool } from "@langchain/core/tools";
+import {
+  StateGraph, Annotation, MemorySaver, InMemoryStore, interrupt, START, END,
+  type LangGraphRunnableConfig,
+} from "@langchain/langgraph";
+import { createAgent } from "langchain";
+import { z } from "zod";
+
+const llm = new ChatAnthropic({ model: "claude-sonnet-5-5" });
+
+const sendEmail = tool(
+  async ({ to, subject, body }) => {
+    // Review mode: pause for a human before the side effect
+    type Edit = { to?: string; subject?: string; body?: string };
+    const approval = interrupt({ action: "send_email", to, subject, body }) as { type: string; args?: Edit };
+    if (approval.type === "edit") {
+      // The reviewer changed the email: send their version
+      const edited = approval.args ?? {};
+      to = edited.to ?? to;
+      subject = edited.subject ?? subject;
+      body = edited.body ?? body;
+    } else if (approval.type !== "accept") {
+      return "The user rejected this email. Do not send it.";
+    }
+    // await gmail.send(to, subject, body);
+    return "Sent to " + to + ": " + subject;
+  },
+  {
+    name: "send_email",
+    description: "Send an email.",
+    schema: z.object({ to: z.string(), subject: z.string(), body: z.string() }),
+  }
+);
+
+const checkCalendar = tool(async ({ day }) => "Free: 10:00-11:00, 15:00-16:00", {
+  name: "check_calendar",
+  description: "List free slots on a given day.",
+  schema: z.object({ day: z.string() }),
+});
+
+const responder = createAgent({ model: llm, tools: [sendEmail, checkCalendar], systemPrompt: "You are my email assistant." });
+
+type Email = { id: string; from: string; subject: string; body: string };
+const State = Annotation.Root({
+  email: Annotation<Email>,
+  decision: Annotation<"ignore" | "notify" | "respond">,
+});
+const Triage = z.object({ decision: z.enum(["ignore", "notify", "respond"]) });
+
+async function triage(state: typeof State.State, config: LangGraphRunnableConfig) {
+  const prefs = await config.store?.get(["user", "prefs"], "triage"); // learned from past feedback
+  const rules = prefs?.value.rules ?? "Respond to customers. Ignore newsletters.";
+  const r = await llm.withStructuredOutput(Triage).invoke(
+    "Triage rules: " + rules + "\n\nEmail: " + JSON.stringify(state.email)
+  );
+  return { decision: r.decision };
+}
+
+async function notify(state: typeof State.State) {
+  interrupt({ type: "notify", email: state.email }); // shows up in the user's inbox UI
+  return {};
+}
+
+async function respond(state: typeof State.State) {
+  await responder.invoke({
+    messages: [{ role: "user", content: "Handle this email: " + JSON.stringify(state.email) }],
+  });
+  return {};
+}
+
+const graph = new StateGraph(State)
+  .addNode("triage", triage)
+  .addNode("notify", notify)
+  .addNode("respond", respond)
+  .addEdge(START, "triage")
+  .addConditionalEdges("triage", (s) => (s.decision === "ignore" ? END : s.decision), ["notify", "respond", END])
+  .addEdge("notify", END)
+  .addEdge("respond", END)
+  .compile({ checkpointer: new MemorySaver(), store: new InMemoryStore() });
+
+// Triggered by events, not chat, e.g. a Gmail push webhook or a cron job:
+const email: Email = { id: "msg-123", from: "client@acme.com", subject: "Meeting next week?", body: "..." };
+await graph.invoke({ email }, { configurable: { thread_id: email.id } });
+`,
+  examplesTitle: "Reference implementations",
+  examples: [
+    { company: "LangChain", ref: true, domain: "langchain.com", title: "Introducing ambient agents (email assistant)", url: "https://blog.langchain.com/introducing-ambient-agents" },
+  ],
+  exNote: "This is an early pattern. LangChain's own email assistant is the main public reference.",
+},
+];
+
+/* =====================================================================
+   TRAITS for the comparison filter (a field-guide key by need)
+   ===================================================================== */
+const TRAITS = [
+  ["flow", "Predictable flow"],
+  ["specialists", "Specialist agents"],
+  ["parallel", "Parallel work"],
+  ["plans", "Plans first"],
+  ["checks", "Self-checking"],
+  ["docs", "Searches docs"],
+  ["human", "Human approval"],
+  ["background", "Runs in background"],
+  ["single", "Single agent"],
+];
+/* =====================================================================
+   COMBOS: production systems that combine patterns (only what each source states)
+   steps are plate ids, or { label } when the source doesn't say which pattern
+   ===================================================================== */
+const COMBOS = [
+  { company: "LinkedIn", domain: "linkedin.com", system: "Hiring Assistant",
+    steps: ["supervisor", "plan-execute", "react"],
+    text: "A supervisor plans and orchestrates in a plan-and-execute loop, delegating to sub-agents that use skills (tools), with layered memory.",
+    url: "https://infoq.com/presentations/LinkedIn-agent-hiring-assistant" },
+  { company: "Fastweb + Vodafone", domain: "vodafone.com", system: "Super TOBi",
+    steps: ["supervisor", "llmcompiler", "hitl"],
+    text: "A supervisor applies guardrails and routes to use-case agents that follow the LLM Compiler pattern, and hands over to human operators.",
+    url: "https://blog.langchain.com/customers-vodafone-italy" },
+  { company: "Uber", domain: "uber.com", system: "Validator & AutoCover",
+    steps: ["network", "reflection"],
+    text: "Specialist sub-agents generate tests that a deterministic checker, an LLM critic and a mutation tester then validate.",
+    url: "https://www.zenml.io/llmops-database/building-ai-developer-tools-using-langgraph-for-large-scale-software-development" },
+  { company: "Exa", domain: "exa.ai", system: "Deep research agent",
+    steps: ["plan-execute", "orchestrator"],
+    text: "A planner creates a varying number of parallel research tasks; an observer keeps context and citations across them.",
+    url: "https://blog.langchain.com/exa" },
+  { company: "Replit", domain: "replit.com", system: "Replit Agent",
+    steps: ["supervisor", "reflection", "hitl"],
+    text: "A manager agent oversees the workflow and directs editor agents; a verifier agent checks the code and often hands back to the user for feedback.",
+    url: "https://www.langchain.com/blog/customers-replit" },
+  { company: "GPT Researcher", domain: "github.com", system: "Open-source research agent", ref: true,
+    steps: ["orchestrator", "reflection"],
+    text: "Parallel researcher agents, then reviewer and reviser agents that critique and revise the draft.",
+    url: "https://github.com/assafelovic/gpt-researcher/blob/master/docs/blog/2024-05-19-gptr-langgraph/index.md" },
+];
+
+/* =====================================================================
+   DOCS: documentation for every code term used in the summaries
+   ===================================================================== */
+const LG = "https://docs.langchain.com/oss/python/langgraph/";
+const LC = "https://docs.langchain.com/oss/python/langchain/";
+const DA = "https://docs.langchain.com/oss/python/deepagents/";
+const DOCS = {
+  "MessagesState": LG + "graph-api#messagesstate",
+  "TypedDict state": LG + "graph-api#state",
+  "ToolNode": LG + "workflows-agents#toolnode",
+  "tools_condition": LG + "workflows-agents#toolnode",
+  "create_agent": LC + "agents",
+  "with_structured_output": LC + "models#structured-output",
+  "recursion_limit": LG + "graph-api#recursion-limit",
+  "add_conditional_edges": LG + "graph-api#conditional-edges",
+  "conditional entry point": LG + "graph-api#conditional-entry-point",
+  "conditional loop edge": LG + "use-graph-api#create-and-control-loops",
+  "loop edges": LG + "use-graph-api#create-and-control-loops",
+  "iteration counter in state": LG + "use-graph-api#create-and-control-loops",
+  "async nodes": LG + "use-graph-api#async",
+  "Command(goto=...)": LG + "graph-api#command",
+  "Command(graph=Command.PARENT)": LG + "use-graph-api#navigate-to-a-node-in-a-parent-graph",
+  "Command(resume=...)": LG + "interrupts#resuming-interrupts",
+  "interrupt()": LG + "interrupts#pause-using-interrupt",
+  "checkpointer": LG + "persistence",
+  "thread_id": LG + "persistence#threads",
+  "Store": LG + "persistence#memory-store",
+  "BaseStore": LG + "persistence#memory-store",
+  "subgraphs": LG + "use-subgraphs",
+  "Send": LG + "graph-api#send",
+  "[Send(\"worker\", {...}) for each item]": LG + "use-graph-api#map-reduce-and-the-send-api",
+  "Annotated[list, operator.add]": LG + "graph-api#reducers",
+  "operator.add": LG + "graph-api#reducers",
+  "max_concurrency": LG + "use-graph-api#run-graph-nodes-in-parallel",
+  "retriever.invoke": "https://docs.langchain.com/oss/python/integrations/retrievers",
+  "create_handoff_tool": LC + "multi-agent/handoffs",
+  "transfer_to_hotel_agent": LC + "multi-agent/handoffs",
+  "langgraph-supervisor": "https://github.com/langchain-ai/langgraph-supervisor-py",
+  "langgraph-swarm": "https://github.com/langchain-ai/langgraph-swarm-py",
+  "deepagents": DA + "overview",
+  "create_deep_agent": DA + "overview",
+  "write_todos": DA + "overview#task-planning",
+  "task (sub-agents)": DA + "subagents",
+  "ls / read_file / write_file": DA + "overview#virtual-filesystem-access",
+  "Agent Inbox": "https://github.com/langchain-ai/agent-inbox",
+  "cron / webhooks": "https://docs.langchain.com/langsmith/cron-jobs",
+  // Not LangGraph itself, but the docs that explain them
+  "steps: list[str]": LC + "models#structured-output",
+  "3. calc($1, $2)": "https://www.langchain.com/blog/planning-agents",
+  "asyncio.gather": "https://docs.python.org/3/library/asyncio-task.html#asyncio.gather",
+};
+
+const ABUNDANCE = { "Most common": 5, "Very common": 4, "Common": 3, "Specialized": 2, "Emerging": 1 };
+
+/* =====================================================================
+   DIAGRAM RENDERER (inline SVG from the node/edge spec)
+   ===================================================================== */
+function esc(s) {
+  return String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+}
+
+// Point where a ray from the rectangle's center in direction (dx, dy) leaves the rectangle
+function clip(n, dx, dy) {
+  const len = Math.hypot(dx, dy) || 1;
+  dx /= len; dy /= len;
+  const sx = dx === 0 ? Infinity : (n.w / 2) / Math.abs(dx);
+  const sy = dy === 0 ? Infinity : (n.h / 2) / Math.abs(dy);
+  const s = Math.min(sx, sy);
+  return [n.x + dx * s, n.y + dy * s];
+}
+
+function edgeLabel(x, y, text) {
+  const w = text.length * 6.6 + 8;
+  return `<rect class="edge-label-bg" x="${x - w / 2}" y="${y - 8}" width="${w}" height="15" rx="3"/>` +
+         `<text class="edge-label" x="${x}" y="${y + 3.5}" text-anchor="middle">${esc(text)}</text>`;
+}
+
+function edgePath(a, b, opt) {
+  let path, lx, ly;
+  if (opt.via) {
+    // Orthogonal route through waypoints
+    const first = opt.via[0], last = opt.via[opt.via.length - 1];
+    const [x1, y1] = clip(a, first[0] - a.x, first[1] - a.y);
+    const [x2, y2] = clip(b, last[0] - b.x, last[1] - b.y);
+    path = `M${x1},${y1} ` + opt.via.map(([x, y]) => `L${x},${y}`).join(" ") + ` L${x2},${y2}`;
+    const m1 = opt.via[Math.floor((opt.via.length - 1) / 2)], m2 = opt.via[Math.ceil((opt.via.length - 1) / 2)];
+    lx = (m1[0] + m2[0]) / 2; ly = (m1[1] + m2[1]) / 2;
+  } else if (!opt.bend) {
+    const [x1, y1] = clip(a, b.x - a.x, b.y - a.y);
+    const [x2, y2] = clip(b, a.x - b.x, a.y - b.y);
+    path = `M${x1},${y1} L${x2},${y2}`;
+    lx = (x1 + x2) / 2; ly = (y1 + y2) / 2;
+    // Label wider than a short, mostly horizontal edge: lift it above the line
+    const segLen = Math.hypot(x2 - x1, y2 - y1);
+    if (opt.label && Math.abs(y2 - y1) < Math.abs(x2 - x1) * 0.3 && opt.label.length * 6 + 12 > segLen) ly -= 12;
+  } else {
+    const dx = b.x - a.x, dy = b.y - a.y, len = Math.hypot(dx, dy) || 1;
+    const cx = (a.x + b.x) / 2 + (-dy / len) * opt.bend;
+    const cy = (a.y + b.y) / 2 + (dx / len) * opt.bend;
+    const [x1, y1] = clip(a, cx - a.x, cy - a.y);
+    const [x2, y2] = clip(b, cx - b.x, cy - b.y);
+    path = `M${x1},${y1} Q${cx},${cy} ${x2},${y2}`;
+    lx = 0.25 * x1 + 0.5 * cx + 0.25 * x2; ly = 0.25 * y1 + 0.5 * cy + 0.25 * y2;
+  }
+  return { path, lx, ly };
+}
+
+function renderEdge(a, b, opt) {
+  const cls = "edge" + (opt.dashed ? " dashed" : "");
+  const markers = ` marker-end="url(#arrow)"` + (opt.both ? ` marker-start="url(#arrow)"` : "");
+  const { path, lx, ly } = edgePath(a, b, opt);
+  return { line: `<path class="${cls}" d="${path}"${markers}/>`, label: opt.label ? edgeLabel(lx, ly, opt.label) : "" };
+}
+
+// Shape cues so node kinds don't rely on colour alone: pills for start/end,
+// square corners for tools, a person icon for human steps
+const RADIUS = { io: null, tool: 3, llm: 9, human: 9, data: 9 };
+function renderNode(n) {
+  const lines = n.label.split("\n");
+  const rx = n.kind === "io" ? n.h / 2 : RADIUS[n.kind];
+  const lh = 14, y0 = n.y - ((lines.length - 1) * lh) / 2 + 4;
+  const text = lines.map((l, i) => `<tspan x="${n.x}" y="${y0 + i * lh}">${esc(l)}</tspan>`).join("");
+  const icon = n.kind === "human"
+    ? `<g class="ico" transform="translate(${n.x - n.w / 2 + 7} ${n.y - 6})"><circle cx="5" cy="3.2" r="2.3"/><path d="M1 10.2c0-2.4 1.8-4 4-4s4 1.6 4 4"/></g>`
+    : "";
+  return `<g class="node"><rect class="n-${n.kind}" x="${n.x - n.w / 2}" y="${n.y - n.h / 2}" width="${n.w}" height="${n.h}" rx="${rx}"/>` +
+         icon + `<text text-anchor="middle">${text}</text></g>`;
+}
+
+function layoutNodes(d) {
+  const nodes = {};
+  for (const n of d.nodes) {
+    const lines = n.label.split("\n").length;
+    nodes[n.id] = {
+      w: n.kind === "io" ? 76 : 120,
+      h: n.kind === "io" ? 32 : Math.max(42, 18 + lines * 14),
+      ...n,
+    };
+  }
+  return nodes;
+}
+
+// Field mark callout: numbered rust dot pinned to the node's top-right corner
+function markDot(n, i) {
+  const cx = n.x + n.w / 2 - 3, cy = n.y - n.h / 2 + 1;
+  return `<g class="fm" aria-hidden="true"><circle cx="${cx}" cy="${cy}" r="9.5"/><text x="${cx}" y="${cy + 4}" text-anchor="middle">${i + 1}</text></g>`;
+}
+
+function renderDiagram(arch) {
+  const d = arch.diagram;
+  const nodes = layoutNodes(d);
+  const edges = d.edges.map(([f, t, opt]) => renderEdge(nodes[f], nodes[t], opt || {}));
+  const marks = (arch.marks || []).map(([id], i) => markDot(nodes[id], i)).join("");
+  return `<svg viewBox="0 -6 ${d.w} ${d.h + 6}" style="--diagram-w:${d.w}px" role="img" aria-labelledby="${arch.id}-dt ${arch.id}-dd">` +
+    `<title id="${arch.id}-dt">${esc(arch.name)} diagram</title><desc id="${arch.id}-dd">${esc(arch.desc)}</desc>` +
+    edges.map((e) => e.line).join("") +
+    Object.values(nodes).map(renderNode).join("") +
+    edges.map((e) => e.label).join("") +
+    marks +
+    `</svg>`;
+}
+
+// Silhouette for the comparison plate: the graph's shape with no words
+function renderSilhouette(arch) {
+  const d = arch.diagram;
+  const nodes = layoutNodes(d);
+  const edges = d.edges.map(([f, t, opt]) =>
+    `<path class="sil-edge${opt && opt.dashed ? " dashed" : ""}" d="${edgePath(nodes[f], nodes[t], opt || {}).path}"/>`).join("");
+  const shapes = Object.values(nodes).map((n) => n.kind === "io"
+    ? `<rect class="sil-io" x="${n.x - n.w / 2 + 6}" y="${n.y - n.h / 2 + 4}" width="${n.w - 12}" height="${n.h - 8}" rx="${(n.h - 8) / 2}"/>`
+    : `<rect class="sil-${n.kind}" x="${n.x - n.w / 2}" y="${n.y - n.h / 2}" width="${n.w}" height="${n.h}" rx="${RADIUS[n.kind]}"/>`).join("");
+  const first = arch.marks && arch.marks[0] ? nodes[arch.marks[0][0]] : null;
+  const dot = first ? `<circle cx="${first.x + first.w / 2 - 3}" cy="${first.y - first.h / 2 + 1}" r="16" fill="var(--rust)"/>` : "";
+  return `<svg viewBox="-10 -20 ${d.w + 20} ${d.h + 30}" preserveAspectRatio="xMidYMid meet" aria-hidden="true" focusable="false">${edges}${shapes}${dot}</svg>`;
+}
+
+/* =====================================================================
+   PAGE RENDERER
+   ===================================================================== */
+const shortName = (a) => a.name.replace(/ \(.*\)$/, "");
+const byId = Object.fromEntries(ARCHS.map((a, i) => [a.id, { a, n: i + 1 }]));
+
+function abundance(a) {
+  const level = ABUNDANCE[a.adoption];
+  const segs = [1, 2, 3, 4, 5].map((i) => `<i class="${i <= level ? "on" : ""}"></i>`).join("");
+  return `<span class="abund"><span class="abund-bar" aria-hidden="true">${segs}</span><span>${esc(a.adoption)}</span></span>`;
+}
+
+function logoHtml(ex) {
+  const letter = esc(ex.company[0]);
+  const src = `https://www.google.com/s2/favicons?domain=${encodeURIComponent(ex.domain)}&sz=64`;
+  return `<span class="logo" data-letter="${letter}"><img src="${src}" alt="" loading="lazy" width="22" height="22" onerror="this.parentNode.textContent=this.parentNode.dataset.letter"></span>`;
+}
+
+function renderSpecimen(a, i) {
+  const first = a.marks && a.marks[0] ? a.marks[0][1] : a.tagline;
+  return `<li><a class="specimen" href="#${a.id}" data-traits="${a.traits.join(" ")}">
+    ${renderSilhouette(a)}
+    <span class="specimen-name"><span class="rank"><span class="sr-only">Plate </span>${i + 1}</span><span>${esc(shortName(a))}</span></span>
+    ${abundance(a)}
+    <span class="specimen-mark"><span class="fm-dot" aria-hidden="true">1</span><span>${esc(first)}</span></span>
+  </a></li>`;
+}
+
+function renderCombo(c) {
+  const steps = c.steps.map((st) => {
+    if (typeof st !== "string") return `<span class="combo-step plain">${esc(st.label)}</span>`;
+    const t = byId[st];
+    return `<a class="combo-step" href="#${st}"><span class="rank"><span class="sr-only">Plate </span>${t.n}</span>${esc(shortName(t.a))}</a>`;
+  }).join(`<span class="combo-plus" aria-hidden="true">+</span>`);
+  return `<li class="combo">
+    <div class="combo-who">${logoHtml(c)}<span class="ex-text"><strong>${esc(c.company)}</strong><span>${esc(c.system)}</span></span></div>
+    <div class="combo-what">
+      <p class="combo-steps"><span class="sr-only">Combines: </span>${steps}</p>
+      <p class="combo-text">${esc(c.text)} <a href="${esc(c.url)}" target="_blank" rel="noopener" class="combo-src"><span class="evidence${c.ref ? " ref" : ""}">${c.ref ? "Open source" : "Case study"}</span><span class="sr-only"> for ${esc(c.system)}</span></a></p>
+    </div>
+  </li>`;
+}
+
+function renderSection(a, i) {
+  const n = i + 1;
+  const examples = a.examples.map((ex) => `
+    <li><a href="${esc(ex.url)}" target="_blank" rel="noopener">
+      ${logoHtml(ex)}
+      <span class="ex-text"><strong>${esc(ex.company)}</strong><span>${esc(ex.title)}</span></span>
+      <span class="evidence${ex.ref ? " ref" : ""}">${ex.ref ? "Reference" : "Case study"}</span>
+    </a></li>`).join("");
+  const marks = (a.marks || []).map(([, text], j) =>
+    `<li><span class="fm-dot" aria-hidden="true">${j + 1}</span><span><span class="sr-only">Field mark ${j + 1}: </span>${esc(text)}</span></li>`).join("");
+  const similar = (a.similar || []).map(([id, text]) => {
+    const t = byId[id];
+    return `<li><a href="#${id}">${esc(shortName(t.a))} (#${t.n})</a>: ${esc(text)}</li>`;
+  }).join("");
+  const tabs = [["summary", "Summary"], ["py", "Python"], ["ts", "TypeScript"]];
+  const tabButtons = tabs.map(([k, label], j) =>
+    `<button role="tab" id="${a.id}-tab-${k}" aria-controls="${a.id}-panel-${k}" aria-selected="${j === 0}" tabindex="${j === 0 ? 0 : -1}">${label}</button>`
+  ).join("");
+  const codePanel = (k, lang, langName, install) => `
+    <div class="panel" role="tabpanel" id="${a.id}-panel-${k}" aria-labelledby="${a.id}-tab-${k}" hidden>
+      <div class="code-meta">
+        <code class="install"><span class="sr-only">Install command: </span>${esc(install)}</code>
+        <button class="copy" data-copy="${a.id}-${k}" data-what="${langName} code for ${esc(shortName(a))}" aria-label="Copy ${langName} code for ${esc(shortName(a))}">Copy code</button>
+      </div>
+      <pre class="code" tabindex="0" role="region" aria-label="${langName} implementation of ${esc(shortName(a))}"><code id="${a.id}-${k}" class="language-${lang}"></code></pre>
+    </div>`;
+
+  return `
+  <section class="arch" id="${a.id}" aria-labelledby="${a.id}-h">
+    <div class="wrap">
+      <div class="arch-head">
+        <h2 id="${a.id}-h"><span class="num"><span class="sr-only">Plate </span>${n}</span> ${esc(a.name)}</h2>
+      </div>
+      <div class="arch-meta">
+        ${abundance(a)}
+      </div>
+      <p class="tagline">${esc(a.tagline)}</p>
+      <div class="grid">
+        <div class="left">
+          <div class="card diagram">
+            <button type="button" class="diagram-expand" data-arch="${a.id}" aria-label="Open the ${esc(shortName(a))} diagram full screen" title="Full screen"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M12 3h5v5M8 17H3v-5M17 3l-6 6M3 17l6-6"/></svg></button>
+            <div class="diagram-scroll" data-arch="${a.id}" aria-label="${esc(shortName(a))} diagram">${renderDiagram(a)}</div>
+            <p class="diagram-hint">Swipe sideways to see the whole diagram.</p>
+            <ol class="marks" aria-label="Field marks">${marks}</ol>
+          </div>
+          <div class="card examples">
+            <h3>${esc(a.examplesTitle || "Seen in production")}</h3>
+            <ul>${examples}</ul>
+            ${a.exNote ? `<p class="ex-note">${esc(a.exNote)}</p>` : ""}
+          </div>
+        </div>
+        <div class="card tabs">
+          <div class="tablist" role="tablist" aria-label="${esc(a.name)} details">${tabButtons}</div>
+          <div class="panel summary" role="tabpanel" tabindex="0" id="${a.id}-panel-summary" aria-labelledby="${a.id}-tab-summary">
+            ${a.summary}
+            ${similar ? `<h3>Similar patterns</h3><ul class="similar">${similar}</ul>` : ""}
+          </div>
+          ${codePanel("py", "python", "Python", a.pyInstall)}
+          ${codePanel("ts", "typescript", "TypeScript", a.tsInstall)}
+        </div>
+      </div>
+    </div>
+  </section>`;
+}
+
+if (typeof document !== "undefined") {
+  document.getElementById("toc").innerHTML =
+    `<a href="#compare" class="toc-compare"><b aria-hidden="true"><svg width="12" height="12" viewBox="0 0 12 12"><rect x="0.5" y="0.5" width="4.5" height="4.5" rx="1" fill="currentColor"/><rect x="7" y="0.5" width="4.5" height="4.5" rx="1" fill="currentColor"/><rect x="0.5" y="7" width="4.5" height="4.5" rx="1" fill="currentColor"/><rect x="7" y="7" width="4.5" height="4.5" rx="1" fill="currentColor"/></svg></b>Compare</a>` +
+    `<div class="toc-chips" id="toc-chips">` +
+    ARCHS.map((a, i) => `<a href="#${a.id}" aria-label="${i + 1} ${esc(shortName(a))}" title="${esc(shortName(a))}"><b>${i + 1}</b></a>`).join("") +
+    `</div><span class="toc-current" id="toc-current" aria-hidden="true"></span>` +
+    `<button type="button" class="toc-toggle" aria-expanded="false" aria-controls="toc-chips">All plates</button>` +
+    `<button type="button" class="theme-toggle" aria-pressed="false" aria-label="Dark theme" title="Switch to dark theme">` +
+    `<svg class="i-moon" viewBox="0 0 20 20" aria-hidden="true"><path d="M16.5 12.4A7 7 0 0 1 7.6 3.5a7 7 0 1 0 8.9 8.9Z"/></svg>` +
+    `<svg class="i-sun" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="3.6"/><path d="M10 1.8v2.2M10 16v2.2M1.8 10H4M16 10h2.2M4.2 4.2l1.6 1.6M14.2 14.2l1.6 1.6M4.2 15.8l1.6-1.6M14.2 5.8l1.6-1.6"/></svg>` +
+    `</button>`;
+  document.getElementById("specimens").innerHTML = ARCHS.map(renderSpecimen).join("");
+  document.getElementById("combo-list").innerHTML = COMBOS.map(renderCombo).join("");
+  document.getElementById("plates").innerHTML = ARCHS.map(renderSection).join("");
+
+  // Code goes in via textContent, so no HTML escaping is needed
+  for (const a of ARCHS) {
+    document.getElementById(a.id + "-py").textContent = a.py;
+    document.getElementById(a.id + "-ts").textContent = a.ts;
+  }
+  if (window.hljs) document.querySelectorAll("pre.code code").forEach((el) => hljs.highlightElement(el));
+
+  // Link every documented LangGraph term in the summaries to its docs page
+  document.querySelectorAll(".summary code").forEach((el) => {
+    const url = DOCS[el.textContent];
+    if (!url || el.closest("a")) return;
+    const a = document.createElement("a");
+    a.className = "doc-link";
+    a.href = url;
+    a.target = "_blank";
+    a.rel = "noopener";
+    el.replaceWith(a);
+    a.append(el, Object.assign(document.createElement("span"), { className: "sr-only", textContent: " (documentation)" }));
+  });
+
+  // Keep each block's last two words together, so no line ends up holding a lone word
+  document.querySelectorAll("p, li, .tagline, .ex-text span, .combo-text").forEach((el) => {
+    if (el.closest("pre, nav, .sr-only")) return;
+    const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+    let last = null;
+    for (let n; (n = walker.nextNode());) if (n.textContent.trim() && !n.parentElement.closest(".sr-only")) last = n;
+    if (!last) return;
+    last.textContent = last.textContent.replace(/(\S+) (\S+\s*)$/, (m, a, b) => (a.length + b.trim().length <= 22 ? a + "\u00a0" + b : m));
+  });
+
+  // Full-screen diagram viewer: expand button, or click / tap the diagram itself
+  const dialog = document.getElementById("diagram-dialog");
+  let opener = null;
+  const openDiagram = (archId, from) => {
+    const t = byId[archId];
+    if (!t) return;
+    const a = t.a;
+    dialog.querySelector("h2").textContent = t.n + " · " + a.name;
+    // Fresh copy with its own ids, so title/desc references stay unique on the page
+    dialog.querySelector(".dd-figure").innerHTML = renderDiagram(a)
+      .replaceAll(a.id + "-dt", a.id + "-dt-full").replaceAll(a.id + "-dd", a.id + "-dd-full");
+    dialog.querySelector(".dd-marks").innerHTML = (a.marks || []).map(([, text], j) =>
+      `<li><span class="fm-dot" aria-hidden="true">${j + 1}</span><span><span class="sr-only">Field mark ${j + 1}: </span>${esc(text)}</span></li>`).join("");
+    opener = from;
+    dialog.showModal();
+  };
+  document.addEventListener("click", (e) => {
+    const trigger = e.target.closest(".diagram-expand, .diagram-scroll");
+    if (trigger) openDiagram(trigger.dataset.arch, document.querySelector(`.diagram-expand[data-arch="${trigger.dataset.arch}"]`));
+  });
+  dialog.querySelector(".dd-close").addEventListener("click", () => dialog.close());
+  dialog.addEventListener("click", (e) => { if (e.target === dialog) dialog.close(); }); // click outside the panel
+  dialog.addEventListener("close", () => { opener?.focus(); opener = null; });
+
+  // Diagram scrollers become keyboard-focusable regions only when they actually scroll (phones)
+  const syncScrollers = () => document.querySelectorAll(".diagram-scroll").forEach((el) => {
+    const scrolls = el.scrollWidth > el.clientWidth + 1;
+    el.parentElement.classList.toggle("is-scrollable", scrolls);
+    if (scrolls) { el.tabIndex = 0; el.setAttribute("role", "region"); }
+    else { el.removeAttribute("tabindex"); el.removeAttribute("role"); }
+  });
+  syncScrollers();
+  addEventListener("resize", syncScrollers);
+
+  // Need filter: highlight patterns that have every selected trait
+  const CHECK = `<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2 6.5 5 9.2 10 3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+  const traitsRow = document.getElementById("traits");
+  traitsRow.innerHTML = TRAITS.map(([id, label]) =>
+    `<button type="button" class="trait" data-trait="${id}" aria-pressed="false">${CHECK}${esc(label)}</button>`).join("") +
+    `<button type="button" class="clear-filter" hidden>Clear</button>`;
+  const status = document.getElementById("filter-status");
+  const clearBtn = traitsRow.querySelector(".clear-filter");
+  const applyFilter = () => {
+    const on = [...traitsRow.querySelectorAll('.trait[aria-pressed="true"]')].map((b) => b.dataset.trait);
+    let shown = 0;
+    document.querySelectorAll(".specimen").forEach((el) => {
+      const have = el.dataset.traits.split(" ");
+      const match = on.every((t) => have.includes(t));
+      el.classList.toggle("is-dim", on.length > 0 && !match);
+      el.classList.toggle("is-match", on.length > 0 && match);
+      if (match) shown++;
+    });
+    clearBtn.hidden = on.length === 0;
+    status.textContent = on.length === 0 ? ""
+      : shown === 0 ? "No single pattern has all of these. Real systems combine patterns, so try fewer."
+      : `${shown} of ${ARCHS.length} patterns match.`;
+  };
+  traitsRow.addEventListener("click", (e) => {
+    const b = e.target.closest(".trait");
+    if (b) { b.setAttribute("aria-pressed", b.getAttribute("aria-pressed") !== "true"); applyFilter(); return; }
+    if (e.target.closest(".clear-filter")) {
+      traitsRow.querySelectorAll(".trait").forEach((t) => t.setAttribute("aria-pressed", "false"));
+      applyFilter();
+      traitsRow.querySelector(".trait").focus();
+    }
+  });
+
+  // Theme switch: overrides the computer's setting; the override is remembered in this browser
+  const themeBtn = document.querySelector(".theme-toggle");
+  const syncThemeBtn = (dark) => {
+    themeBtn.setAttribute("aria-pressed", dark);
+    themeBtn.title = dark ? "Switch to light theme" : "Switch to dark theme";
+  };
+  syncThemeBtn(document.documentElement.dataset.theme === "dark");
+  themeBtn.addEventListener("click", () => {
+    const dark = themeBtn.getAttribute("aria-pressed") !== "true";
+    applyTheme(dark);
+    syncThemeBtn(dark);
+    // Remember an override; choosing what the system already uses means "follow the system" again
+    try {
+      if (dark === systemDark.matches) localStorage.removeItem("theme");
+      else localStorage.setItem("theme", dark ? "dark" : "light");
+    } catch {}
+  });
+  // While following the system, track it live (e.g. automatic dark mode at night)
+  systemDark.addEventListener("change", (e) => {
+    let saved = null;
+    try { saved = localStorage.getItem("theme"); } catch {}
+    if (saved) return;
+    applyTheme(e.matches);
+    syncThemeBtn(e.matches);
+  });
+
+  // Phones: the plate numbers live behind an "All plates" toggle so the pinned bar stays one row
+  const tocNav = document.querySelector("nav.toc");
+  const tocToggle = tocNav.querySelector(".toc-toggle");
+  const setOpen = (open) => { tocNav.classList.toggle("is-open", open); tocToggle.setAttribute("aria-expanded", open); };
+  tocToggle.addEventListener("click", () => setOpen(tocToggle.getAttribute("aria-expanded") !== "true"));
+  tocNav.addEventListener("click", (e) => { if (e.target.closest(".toc-chips a")) setOpen(false); });
+  tocNav.addEventListener("keydown", (e) => { if (e.key === "Escape" && tocNav.classList.contains("is-open")) { setOpen(false); tocToggle.focus(); } });
+
+  // Plate index: mark the plate in view, keep its link visible in the strip
+  const tocLinks = Object.fromEntries([...document.querySelectorAll("#toc a")].map((l) => [l.hash.slice(1), l]));
+  const io = new IntersectionObserver((entries) => {
+    for (const en of entries) {
+      if (!en.isIntersecting) continue;
+      Object.values(tocLinks).forEach((l) => l.removeAttribute("aria-current"));
+      const link = tocLinks[en.target.id];
+      if (!link) continue;
+      link.setAttribute("aria-current", "location");
+      const current = byId[en.target.id];
+      document.getElementById("toc-current").textContent = current ? current.n + " · " + shortName(current.a) : "";
+    }
+  }, { rootMargin: "-45% 0px -50% 0px" });
+  document.querySelectorAll("#compare, section.arch").forEach((s) => io.observe(s));
+
+  // Tabs (click + arrow keys + Home / End)
+  document.querySelectorAll(".tablist").forEach((list) => {
+    const buttons = [...list.querySelectorAll('[role="tab"]')];
+    const select = (btn) => {
+      buttons.forEach((b) => {
+        const on = b === btn;
+        b.setAttribute("aria-selected", on);
+        b.tabIndex = on ? 0 : -1;
+        document.getElementById(b.getAttribute("aria-controls")).hidden = !on;
+      });
+    };
+    list.addEventListener("click", (e) => { const b = e.target.closest('[role="tab"]'); if (b) select(b); });
+    list.addEventListener("keydown", (e) => {
+      const i = buttons.indexOf(document.activeElement);
+      if (i < 0) return;
+      const target = {
+        ArrowRight: buttons[(i + 1) % buttons.length],
+        ArrowLeft: buttons[(i + buttons.length - 1) % buttons.length],
+        Home: buttons[0],
+        End: buttons[buttons.length - 1],
+      }[e.key];
+      if (!target) return;
+      e.preventDefault();
+      target.focus(); select(target);
+    });
+  });
+
+  // Copy buttons: announce the result; if the clipboard is blocked, select the code instead
+  const announcer = document.getElementById("announcer");
+  document.addEventListener("click", async (e) => {
+    const btn = e.target.closest(".copy");
+    if (!btn) return;
+    const code = document.getElementById(btn.dataset.copy);
+    let message;
+    try {
+      await navigator.clipboard.writeText(code.textContent);
+      btn.textContent = "Copied";
+      message = btn.dataset.what + " copied to the clipboard.";
+    } catch {
+      const range = document.createRange();
+      range.selectNodeContents(code);
+      const sel = getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+      btn.textContent = "Code selected";
+      message = "Couldn't copy automatically. The " + btn.dataset.what + " is selected: press Ctrl+C or Cmd+C to copy it.";
+    }
+    announcer.textContent = message;
+    clearTimeout(btn._reset);
+    btn._reset = setTimeout(() => (btn.textContent = "Copy code"), 2000);
+  });
+}
+</script>
+</body>
+</html>
